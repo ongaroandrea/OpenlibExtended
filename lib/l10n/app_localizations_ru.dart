@@ -255,6 +255,23 @@ class AppLocalizationsRu extends AppLocalizations {
   String get preview => 'Предпросмотр';
 
   @override
+  String get folderAccessTitle => 'Разрешить доступ к этой папке?';
+
+  @override
+  String get folderAccessBody =>
+      'Android позволяет сохранять файлы в эту папку только с «Доступом ко всем файлам». OpenlibExtended использует его только для сохранения, перемещения и поиска книг в выбранной папке.\n\nЕсли оставить текущую папку, разрешение не нужно. Книги по-прежнему открываются в других приложениях для чтения.';
+
+  @override
+  String get folderAccessAllow => 'Разрешить';
+
+  @override
+  String get folderAccessKeep => 'Оставить текущую папку';
+
+  @override
+  String get folderAccessKeptCurrent =>
+      'Нет доступа к этой папке. Книги остаются в текущей папке.';
+
+  @override
   String get storageLocation => 'Место хранения';
 
   @override
@@ -273,6 +290,13 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get manualDownloadButton => 'Кнопка ручной загрузки';
+
+  @override
+  String get einkMode => 'Режим e-ink';
+
+  @override
+  String get einkModeHint =>
+      'Для экранов на электронных чернилах: без анимаций, волн и вращающихся индикаторов, прокрутка останавливается вместе с пальцем, реже обновляется прогресс';
 
   @override
   String get backgroundVerification => 'Проверять задания в фоне';
@@ -490,9 +514,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get unableToOpenFile => 'Не удалось открыть файл!';
 
   @override
-  String get openInSite => 'Открыть на сайте';
-
-  @override
   String get bookDeleted => 'Книга удалена!';
 
   @override
@@ -546,9 +567,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get genres => 'Жанры';
 
   @override
-  String get copiedBookPath => 'Путь к книге скопирован в буфер обмена';
-
-  @override
   String get pauseDownload => 'Приостановить загрузку';
 
   @override
@@ -556,9 +574,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get cancelDownload => 'Отменить загрузку';
-
-  @override
-  String get copiedBookLink => 'Ссылка на книгу скопирована в буфер обмена';
 
   @override
   String get noMirrors => 'Нет доступных зеркал!';
@@ -779,4 +794,301 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get whatsNewFeatureCovers =>
       'Недостающие обложки LibGen загружаются со страницы книги.';
+
+  @override
+  String get volumeKeysTurnPages => 'Кнопки громкости листают страницы';
+
+  @override
+  String get volumeKeysTurnPagesHint =>
+      'Во встроенных читалках «тише» открывает следующую страницу, «громче» — предыдущую. В режиме E-ink включено по умолчанию';
+
+  @override
+  String get loadMoreResults => 'Загрузить ещё';
+
+  @override
+  String get readerHelpTitle => 'Управление чтением';
+
+  @override
+  String get readerHelpTapTitle => 'Касание краёв';
+
+  @override
+  String get readerHelpTapBody =>
+      'Коснитесь правого края для следующей страницы, левого — для предыдущей';
+
+  @override
+  String get readerHelpKeysTitle => 'Клавиши страниц';
+
+  @override
+  String get readerHelpKeysBody =>
+      'Page Down, вправо, вниз или пробел: следующая страница. Page Up, влево, вверх или Shift+пробел: предыдущая';
+
+  @override
+  String get readerHelpVolumeTitle => 'Кнопки громкости';
+
+  @override
+  String get readerHelpVolumeBody =>
+      'Тише: следующая страница. Громче: предыдущая';
+
+  @override
+  String get readerHelpTextSizeTitle => 'Размер текста';
+
+  @override
+  String get readerHelpTextSizeBody =>
+      'Кнопки уменьшения и увеличения текста на верхней панели';
+
+  @override
+  String get readerHelpContentsTitle => 'Содержание';
+
+  @override
+  String get readerHelpContentsBody =>
+      'Проведите от правого края, чтобы открыть оглавление';
+
+  @override
+  String get searchFieldHint => 'Поиск';
+
+  @override
+  String get searchSubmitTooltip => 'Искать';
+
+  @override
+  String get searchClear => 'Очистить поиск';
+
+  @override
+  String get searchFieldEmpty => 'Поле поиска пустое';
+
+  @override
+  String get searchFilterType => 'Тип';
+
+  @override
+  String get searchFilterSort => 'Сортировка';
+
+  @override
+  String get searchFilterFileType => 'Тип файла';
+
+  @override
+  String get searchFilterLanguage => 'Язык';
+
+  @override
+  String get searchFilterYear => 'Год издания';
+
+  @override
+  String get searchFileTypeSupported => 'Поддерживаемые форматы';
+
+  @override
+  String get searchFilterAll => 'Все';
+
+  @override
+  String get searchTypeAnyBooks => 'Любые книги';
+
+  @override
+  String get searchTypeUnknownBooks => 'Неизвестные книги';
+
+  @override
+  String get searchTypeFiction => 'Художественная литература';
+
+  @override
+  String get searchTypeNonFiction => 'Нехудожественная литература';
+
+  @override
+  String get searchTypeComic => 'Комиксы';
+
+  @override
+  String get searchTypeMagazine => 'Журнал';
+
+  @override
+  String get searchTypeStandardsDocument => 'Стандарт';
+
+  @override
+  String get searchTypeJournalArticle => 'Научная статья';
+
+  @override
+  String get searchSortMostRelevant => 'По релевантности';
+
+  @override
+  String get searchSortNewest => 'Сначала новые';
+
+  @override
+  String get searchSortOldest => 'Сначала старые';
+
+  @override
+  String get searchSortLargest => 'Сначала большие';
+
+  @override
+  String get searchSortSmallest => 'Сначала маленькие';
+
+  @override
+  String get searchYearBefore1980 => 'До 1980';
+
+  @override
+  String cardTitleByAuthor(String title, String author) {
+    return '$title, автор: $author';
+  }
+
+  @override
+  String cardSource(String source) {
+    return 'Источник: $source';
+  }
+
+  @override
+  String get cardDownloadedBadge => 'Уже скачано';
+
+  @override
+  String get errorWhatToDo => 'Что делать';
+
+  @override
+  String get errorVpnHint => 'VPN может помочь обойти региональные блокировки.';
+
+  @override
+  String get errorVerifyIntro =>
+      'Сайт хочет убедиться, что вы человек. Мы откроем окно браузера, где можно пройти проверку.';
+
+  @override
+  String get errorVerifyReturnHint =>
+      'Когда закончите, вернитесь в приложение и нажмите «Повторить».';
+
+  @override
+  String get errorNoContent => 'Нет содержимого';
+
+  @override
+  String errorTruncated(int count) {
+    return '… (обрезано, всего символов: $count)';
+  }
+
+  @override
+  String get errorNoInternetTitle => 'Нет подключения к интернету';
+
+  @override
+  String get errorNoInternetBody =>
+      'Проверьте, что Wi-Fi или мобильные данные включены, а режим полёта выключен, и повторите попытку.';
+
+  @override
+  String get errorTimeoutTitle => 'Источник слишком долго не отвечал';
+
+  @override
+  String get errorTimeoutBody =>
+      'Возможно, соединение медленное или сайт перегружен. Повторите попытку чуть позже или выберите другой источник.';
+
+  @override
+  String get errorServerUnavailableTitle => 'Источник не отвечает';
+
+  @override
+  String get errorServerUnavailableBody =>
+      'Возможно, сайт временно недоступен. Повторите через несколько минут или выберите другое зеркало в настройках.';
+
+  @override
+  String get errorBlockedTitle => 'Сайт требует проверки, что вы человек';
+
+  @override
+  String get errorBlockedBody =>
+      'Нажмите «Проверить в браузере», чтобы пройти проверку, или повторите через несколько минут. Также может помочь другая сеть или VPN.';
+
+  @override
+  String get errorForbiddenTitle => 'Доступ запрещён';
+
+  @override
+  String get errorForbiddenBody =>
+      'Сайт отклонил запрос. Возможно, он заблокирован в вашем регионе; поможет VPN или другое зеркало в настройках.';
+
+  @override
+  String get errorRateLimitedTitle => 'Слишком много запросов';
+
+  @override
+  String get errorRateLimitedBody =>
+      'Подождите несколько минут и повторите попытку.';
+
+  @override
+  String get errorSslTitle => 'Не удалось установить защищённое соединение';
+
+  @override
+  String get errorSslBody =>
+      'Возможно, ваша сеть блокирует защищённые соединения. Попробуйте другую сеть или VPN.';
+
+  @override
+  String get errorDnsTitle => 'Сервер не найден';
+
+  @override
+  String get errorDnsBody =>
+      'Возможно, сеть или провайдер блокирует сайт. Попробуйте DNS 1.1.1.1, VPN или другую сеть.';
+
+  @override
+  String get errorUnknownTitle => 'Что-то пошло не так';
+
+  @override
+  String get errorUnknownBody =>
+      'Повторите попытку или выберите другой источник.';
+
+  @override
+  String get errorSourcesFailedTitle => 'Ни один источник не ответил';
+
+  @override
+  String errorSourcesFailedBody(String sources) {
+    return '$sources: нет ответа. Источники могут быть недоступны или заблокированы в вашей сети. Повторите попытку, попробуйте другую сеть или VPN.';
+  }
+
+  @override
+  String resultsSourcesDidNotRespond(String sources) {
+    return '$sources: нет ответа';
+  }
+
+  @override
+  String resultsNoMatchesSourcesDown(String sources) {
+    return '$sources: нет ответа, поэтому поиск прошёл не по всем источникам.';
+  }
+
+  @override
+  String get resultsNoMatchesHint =>
+      'Проверьте написание, сократите запрос или поищите в другом источнике.';
+
+  @override
+  String get resultsClearFilters => 'Сбросить фильтры';
+
+  @override
+  String get resultsTryAnotherSource => 'Другой источник';
+
+  @override
+  String get resultsEditSearch => 'Изменить запрос';
+
+  @override
+  String resultsEndOfList(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Конец результатов · $count книги',
+      many: 'Конец результатов · $count книг',
+      few: 'Конец результатов · $count книги',
+      one: 'Конец результатов · $count книга',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get resultsActiveFilters => 'Активные фильтры';
+
+  @override
+  String resultsFilterChip(String label, String value) {
+    return '$label: $value';
+  }
+
+  @override
+  String get resultsRemoveFilter => 'Убрать фильтр';
+
+  @override
+  String resultsFiltersIgnored(int count, String filters, String source) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$source не поддерживает фильтры «$filters», результаты по ним не отфильтрованы.',
+      many:
+          '$source не поддерживает фильтры «$filters», результаты по ним не отфильтрованы.',
+      few:
+          '$source не поддерживает фильтры «$filters», результаты по ним не отфильтрованы.',
+      one:
+          '$source не поддерживает фильтр «$filters», результаты по нему не отфильтрованы.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get resultsSortedWithinPage =>
+      'Сортировка внутри каждой страницы результатов';
 }

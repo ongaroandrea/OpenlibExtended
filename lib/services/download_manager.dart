@@ -7,6 +7,7 @@ import 'package:dio/dio.dart';
 import 'package:crypto/crypto.dart';
 
 // Project imports:
+import 'package:openlib/features/eink/progress_throttle.dart';
 import 'package:openlib/services/database.dart' show MyLibraryDb, MyBook;
 import 'package:openlib/services/download_notification.dart';
 import 'package:openlib/services/files.dart' show generateBookFileName;
@@ -999,6 +1000,9 @@ class DownloadManager {
     }
   }
 
+  /// Last time each task's progress reached the UI.
+  final Map<String, DateTime> _lastProgressEmit = {};
+
   void _updateTaskProgress(
       String taskId, double progress, int downloaded, int total) {
     if (_activeDownloads.containsKey(taskId)) {
@@ -1007,7 +1011,14 @@ class DownloadManager {
         downloadedBytes: downloaded,
         totalBytes: total,
       );
-      _notifyListeners();
+      // The task map is always current; only the repaint is throttled
+      // (lib/features/eink). Status changes notify on their own.
+      final now = DateTime.now();
+      if (shouldEmitProgressUi(
+          lastEmit: _lastProgressEmit[taskId], now: now, progress: progress)) {
+        _lastProgressEmit[taskId] = now;
+        _notifyListeners();
+      }
     }
   }
 
@@ -1021,6 +1032,7 @@ class DownloadManager {
   void removeDownload(String taskId) {
     _notificationService.cancelNotification(taskId.hashCode);
     _activeDownloads.remove(taskId);
+    _lastProgressEmit.remove(taskId);
     _notifyListeners();
   }
 

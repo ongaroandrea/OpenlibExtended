@@ -255,6 +255,23 @@ class AppLocalizationsEs extends AppLocalizations {
   String get preview => 'Vista previa';
 
   @override
+  String get folderAccessTitle => '¿Permitir acceso a esta carpeta?';
+
+  @override
+  String get folderAccessBody =>
+      'Android solo permite guardar archivos en esta carpeta con \"Acceso a todos los archivos\". OpenlibExtended lo usa solo para guardar, mover y encontrar libros en la carpeta que elegiste.\n\nNo lo necesitas si mantienes la carpeta actual. Los libros se siguen abriendo en otras apps de lectura.';
+
+  @override
+  String get folderAccessAllow => 'Permitir';
+
+  @override
+  String get folderAccessKeep => 'Mantener carpeta actual';
+
+  @override
+  String get folderAccessKeptCurrent =>
+      'Sin acceso a esa carpeta. Los libros se quedan en la carpeta actual.';
+
+  @override
   String get storageLocation => 'Ubicación de almacenamiento';
 
   @override
@@ -271,6 +288,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get manualDownloadButton => 'Botón de descarga manual';
+
+  @override
+  String get einkMode => 'Modo e-ink';
+
+  @override
+  String get einkModeHint =>
+      'Para pantallas de tinta electrónica: sin animaciones, ondas ni indicadores giratorios, el desplazamiento se detiene con el dedo y menos actualizaciones de progreso';
 
   @override
   String get backgroundVerification => 'Verificar en segundo plano';
@@ -492,9 +516,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get unableToOpenFile => '¡No se pudo abrir el archivo!';
 
   @override
-  String get openInSite => 'Abrir en el sitio';
-
-  @override
   String get bookDeleted => '¡Libro eliminado!';
 
   @override
@@ -548,9 +569,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get genres => 'Géneros';
 
   @override
-  String get copiedBookPath => 'Ruta del libro copiada al portapapeles';
-
-  @override
   String get pauseDownload => 'Pausar descarga';
 
   @override
@@ -558,9 +576,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get cancelDownload => 'Cancelar descarga';
-
-  @override
-  String get copiedBookLink => 'Enlace del libro copiado al portapapeles';
 
   @override
   String get noMirrors => '¡No hay espejos disponibles!';
@@ -782,4 +797,295 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get whatsNewFeatureCovers =>
       'Las portadas de LibGen que faltan se obtienen de la página de detalle del libro.';
+
+  @override
+  String get volumeKeysTurnPages => 'Las teclas de volumen pasan página';
+
+  @override
+  String get volumeKeysTurnPagesHint =>
+      'En los lectores integrados, bajar volumen va a la página siguiente y subir volumen a la anterior. Activado por defecto en el modo E-ink';
+
+  @override
+  String get loadMoreResults => 'Cargar más';
+
+  @override
+  String get readerHelpTitle => 'Controles del lector';
+
+  @override
+  String get readerHelpTapTitle => 'Toca los bordes';
+
+  @override
+  String get readerHelpTapBody =>
+      'Toca el borde derecho para la página siguiente y el izquierdo para la anterior';
+
+  @override
+  String get readerHelpKeysTitle => 'Teclas de página';
+
+  @override
+  String get readerHelpKeysBody =>
+      'Av Pág, Derecha, Abajo o Espacio: página siguiente. Re Pág, Izquierda, Arriba o Mayús+Espacio: página anterior';
+
+  @override
+  String get readerHelpVolumeTitle => 'Teclas de volumen';
+
+  @override
+  String get readerHelpVolumeBody =>
+      'Bajar volumen: página siguiente. Subir volumen: página anterior';
+
+  @override
+  String get readerHelpTextSizeTitle => 'Tamaño del texto';
+
+  @override
+  String get readerHelpTextSizeBody =>
+      'Usa los botones de texto más pequeño y más grande de la barra superior';
+
+  @override
+  String get readerHelpContentsTitle => 'Índice';
+
+  @override
+  String get readerHelpContentsBody =>
+      'Desliza desde el borde derecho para ver el índice';
+
+  @override
+  String get searchFieldHint => 'Buscar';
+
+  @override
+  String get searchSubmitTooltip => 'Buscar';
+
+  @override
+  String get searchClear => 'Borrar búsqueda';
+
+  @override
+  String get searchFieldEmpty => 'El campo de búsqueda está vacío';
+
+  @override
+  String get searchFilterType => 'Tipo';
+
+  @override
+  String get searchFilterSort => 'Ordenar por';
+
+  @override
+  String get searchFilterFileType => 'Tipo de archivo';
+
+  @override
+  String get searchFilterLanguage => 'Idioma';
+
+  @override
+  String get searchFilterYear => 'Año de publicación';
+
+  @override
+  String get searchFileTypeSupported => 'Formatos compatibles';
+
+  @override
+  String get searchFilterAll => 'Todos';
+
+  @override
+  String get searchTypeAnyBooks => 'Cualquier libro';
+
+  @override
+  String get searchTypeUnknownBooks => 'Libros desconocidos';
+
+  @override
+  String get searchTypeFiction => 'Ficción';
+
+  @override
+  String get searchTypeNonFiction => 'No ficción';
+
+  @override
+  String get searchTypeComic => 'Cómics';
+
+  @override
+  String get searchTypeMagazine => 'Revista';
+
+  @override
+  String get searchTypeStandardsDocument => 'Documento de normas';
+
+  @override
+  String get searchTypeJournalArticle => 'Artículo de revista';
+
+  @override
+  String get searchSortMostRelevant => 'Más relevantes';
+
+  @override
+  String get searchSortNewest => 'Más recientes';
+
+  @override
+  String get searchSortOldest => 'Más antiguos';
+
+  @override
+  String get searchSortLargest => 'Más grandes';
+
+  @override
+  String get searchSortSmallest => 'Más pequeños';
+
+  @override
+  String get searchYearBefore1980 => 'Antes de 1980';
+
+  @override
+  String cardTitleByAuthor(String title, String author) {
+    return '$title, de $author';
+  }
+
+  @override
+  String cardSource(String source) {
+    return 'Fuente: $source';
+  }
+
+  @override
+  String get cardDownloadedBadge => 'Ya descargado';
+
+  @override
+  String get errorWhatToDo => 'Qué hacer';
+
+  @override
+  String get errorVpnHint =>
+      'Una VPN puede ayudar a evitar bloqueos regionales.';
+
+  @override
+  String get errorVerifyIntro =>
+      'El sitio quiere comprobar que eres humano. Abriremos una ventana del navegador para que completes la comprobación.';
+
+  @override
+  String get errorVerifyReturnHint =>
+      'Cuando termines, vuelve a la app y toca Reintentar.';
+
+  @override
+  String get errorNoContent => 'No hay contenido disponible';
+
+  @override
+  String errorTruncated(int count) {
+    return '… (recortado, $count caracteres en total)';
+  }
+
+  @override
+  String get errorNoInternetTitle => 'Sin conexión';
+
+  @override
+  String get errorNoInternetBody =>
+      'Comprueba que el Wi-Fi o los datos móviles estén activados y el modo avión desactivado, y vuelve a intentarlo.';
+
+  @override
+  String get errorTimeoutTitle => 'La fuente tardó demasiado en responder';
+
+  @override
+  String get errorTimeoutBody =>
+      'Puede que tu conexión sea lenta o que el sitio esté saturado. Vuelve a intentarlo en un momento o elige otra fuente.';
+
+  @override
+  String get errorServerUnavailableTitle => 'La fuente no responde';
+
+  @override
+  String get errorServerUnavailableBody =>
+      'Puede que el sitio no esté disponible ahora. Vuelve a intentarlo en unos minutos o elige otro espejo en Ajustes.';
+
+  @override
+  String get errorBlockedTitle => 'El sitio quiere comprobar que eres humano';
+
+  @override
+  String get errorBlockedBody =>
+      'Toca Verificar en el navegador para pasar la comprobación o vuelve a intentarlo en unos minutos. Otra red o una VPN también pueden ayudar.';
+
+  @override
+  String get errorForbiddenTitle => 'Acceso denegado';
+
+  @override
+  String get errorForbiddenBody =>
+      'El sitio rechazó la solicitud. Puede estar bloqueado en tu región; una VPN u otro espejo en Ajustes pueden ayudar.';
+
+  @override
+  String get errorRateLimitedTitle => 'Demasiadas solicitudes';
+
+  @override
+  String get errorRateLimitedBody =>
+      'Espera unos minutos y vuelve a intentarlo.';
+
+  @override
+  String get errorSslTitle => 'Falló la conexión segura';
+
+  @override
+  String get errorSslBody =>
+      'Puede que tu red bloquee las conexiones seguras. Prueba otra red o una VPN.';
+
+  @override
+  String get errorDnsTitle => 'No se encuentra el servidor';
+
+  @override
+  String get errorDnsBody =>
+      'Puede que tu red o proveedor bloquee el sitio. Prueba a cambiar el DNS a 1.1.1.1, una VPN u otra red.';
+
+  @override
+  String get errorUnknownTitle => 'Algo salió mal';
+
+  @override
+  String get errorUnknownBody => 'Vuelve a intentarlo o elige otra fuente.';
+
+  @override
+  String get errorSourcesFailedTitle => 'Ninguna fuente respondió';
+
+  @override
+  String errorSourcesFailedBody(String sources) {
+    return '$sources no respondió. Puede que no estén disponibles o estén bloqueadas en tu red. Vuelve a intentarlo, o prueba otra red o una VPN.';
+  }
+
+  @override
+  String resultsSourcesDidNotRespond(String sources) {
+    return '$sources no respondió';
+  }
+
+  @override
+  String resultsNoMatchesSourcesDown(String sources) {
+    return '$sources no respondió, así que no se buscó en todas las fuentes.';
+  }
+
+  @override
+  String get resultsNoMatchesHint =>
+      'Revisa la ortografía, usa menos palabras o busca en otra fuente.';
+
+  @override
+  String get resultsClearFilters => 'Borrar filtros';
+
+  @override
+  String get resultsTryAnotherSource => 'Probar otra fuente';
+
+  @override
+  String get resultsEditSearch => 'Editar búsqueda';
+
+  @override
+  String resultsEndOfList(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Fin de los resultados · $count libros',
+      one: 'Fin de los resultados · 1 libro',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get resultsActiveFilters => 'Filtros activos';
+
+  @override
+  String resultsFilterChip(String label, String value) {
+    return '$label: $value';
+  }
+
+  @override
+  String get resultsRemoveFilter => 'Quitar filtro';
+
+  @override
+  String resultsFiltersIgnored(int count, String filters, String source) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$source no admite $filters, así que los resultados no se filtran por ellos.',
+      one:
+          '$source no admite $filters, así que los resultados no se filtran por ello.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get resultsSortedWithinPage =>
+      'Ordenado dentro de cada página de resultados';
 }

@@ -1,5 +1,6 @@
 import 'package:openlib/core/book_language.dart';
 // Dart imports:
+import 'dart:collection';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -18,6 +19,8 @@ import 'package:openlib/services/database.dart';
 import 'package:openlib/services/reader_apps.dart';
 import 'package:openlib/services/libgen_service.dart';
 import 'package:openlib/services/search_manager.dart';
+import 'package:openlib/services/network_error.dart';
+import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/files.dart';
 import 'package:openlib/services/open_library.dart';
 import 'package:openlib/services/goodreads.dart';
@@ -53,7 +56,18 @@ Map<String, String> sortValues = {
   'Smallest': 'smallest',
 };
 
-List<String> fileType = ["All", "PDF", "Epub", "Cbr", "Cbz"];
+/// File type filter values (also the persisted preference values).
+/// "Supported" - the default - asks for the formats the app can open
+/// ([supportedBookExtensions]); "All" asks for every format.
+const supportedFileTypeValue = 'Supported';
+List<String> fileType = [
+  supportedFileTypeValue,
+  "All",
+  "PDF",
+  "Epub",
+  "Cbr",
+  "Cbz",
+];
 
 // Language filter values (display name: code)
 Map<String, String> languageValues = {
@@ -62,20 +76,14 @@ Map<String, String> languageValues = {
     language.value: language.key,
 };
 
-// Year filter values for publishing year range
-List<String> yearValues = [
+// Year filter values for publishing year range. Single years run from the
+// current year down to 2015, so the list never goes stale. The strings are
+// also the persisted preference values; the UI maps them to labels.
+List<String> yearValues = buildYearValues();
+
+List<String> buildYearValues([DateTime? now]) => [
   "All",
-  "2025",
-  "2024",
-  "2023",
-  "2022",
-  "2021",
-  "2020",
-  "2019",
-  "2018",
-  "2017",
-  "2016",
-  "2015",
+  for (var y = (now ?? DateTime.now()).year; y >= 2015; y--) '$y',
   "2010-2014",
   "2005-2009",
   "2000-2004",
@@ -168,7 +176,8 @@ final localeOverrideProvider = StateProvider<Locale?>((ref) => null);
 // Search Filter States
 final selectedTypeState = StateProvider<String>((ref) => "All");
 final selectedSortState = StateProvider<String>((ref) => "Most Relevant");
-final selectedFileTypeState = StateProvider<String>((ref) => "All");
+final selectedFileTypeState =
+    StateProvider<String>((ref) => supportedFileTypeValue);
 final selectedLanguageState = StateProvider<String>((ref) => "All");
 final selectedYearState = StateProvider<String>((ref) => "All");
 final searchQueryProvider = StateProvider<String>((ref) => "");
@@ -274,7 +283,12 @@ final getSortValue = Provider.autoDispose<String>((ref) {
 
 final getFileTypeValue = Provider.autoDispose<String>((ref) {
   final selectedFile = ref.watch(selectedFileTypeState);
-  return selectedFile == "All" ? '' : selectedFile.toLowerCase();
+  if (selectedFile == "All") return '';
+  // Comma-separated: every source understands a list (see SearchQuery).
+  if (selectedFile == supportedFileTypeValue) {
+    return supportedBookExtensions.join(',');
+  }
+  return selectedFile.toLowerCase();
 });
 
 final getLanguageValue = Provider.autoDispose<String>((ref) {
@@ -354,6 +368,60 @@ class SearchPageKey {
   int get hashCode => Object.hash(query, page, source);
 }
 
+/// One page of search results plus what the UI needs to explain it.
+///
+/// It IS the list of books (so `List<BookData>` consumers and test
+/// overrides keep working) and additionally carries the sources that
+/// failed while the page was searched, so the results page can tell
+/// "no matches" apart from "a source was down".
+class SearchResultPage extends ListBase<BookData> {
+  SearchResultPage(List<BookData> books,
+      {List<String> failedSources = const [],
+      this.resultSource = '',
+      Set<SearchFilter> ignoredFilters = const {},
+      Set<SearchFilter> clientSideFilters = const {}})
+      : _books = List.unmodifiable(books),
+        failedSources = List.unmodifiable(failedSources),
+        ignoredFilters = Set.unmodifiable(ignoredFilters),
+        clientSideFilters = Set.unmodifiable(clientSideFilters);
+
+  final List<BookData> _books;
+
+  /// Display names of the sources that threw for this page.
+  final List<String> failedSources;
+
+  /// The catalog the books came from ('' when unknown).
+  final String resultSource;
+
+  /// Active filters [resultSource] could not apply (results unfiltered).
+  final Set<SearchFilter> ignoredFilters;
+
+  /// Active filters the app applied itself; sort here is per page only.
+  final Set<SearchFilter> clientSideFilters;
+
+  @override
+  int get length => _books.length;
+
+  @override
+  set length(int newLength) =>
+      throw UnsupportedError('SearchResultPage is read-only');
+
+  @override
+  BookData operator [](int index) => _books[index];
+
+  @override
+  void operator []=(int index, BookData value) =>
+      throw UnsupportedError('SearchResultPage is read-only');
+}
+
+/// The search manager used by [searchProvider]; overridable in tests.
+final searchManagerProvider = Provider<SearchManager>((ref) => SearchManager());
+
+/// Whether the device can reach the internet at all. Used to tell
+/// "you're offline" apart from "every source is down".
+final internetCheckProvider = Provider<Future<bool> Function()>(
+    (ref) => ConnectivityChecker.hasInternetConnection);
+
 // Provider for one page of search results across all enabled providers
 final searchProvider = FutureProvider.family
     .autoDispose<List<BookData>, SearchPageKey>((ref, key) async {
@@ -363,7 +431,7 @@ final searchProvider = FutureProvider.family
 
   // A provider failure must not swallow results from the others: the
   // manager returns what it got and lists the stragglers by name.
-  final manager = SearchManager();
+  final manager = ref.watch(searchManagerProvider);
   final result = await manager.search(SearchQuery(
     text: key.query,
     content: ref.watch(getTypeValue),
@@ -384,10 +452,25 @@ final searchProvider = FutureProvider.family
     // Every enabled provider failed: surface a real error. One failing
     // provider with others merely finding nothing is NOT an error - an
     // empty result from a working source is a valid "no matches".
-    throw Exception('All search sources are unreachable: '
-        '${result.failedProviders.join(', ')}');
+    // Offline is the common cause and has its own, actionable message;
+    // otherwise name the sources that did not answer.
+    final online = await ref.read(internetCheckProvider)();
+    final NetworkError error = online
+        ? NetworkError.sourcesUnavailable(result.failedProviders)
+        : NetworkError.offline();
+    // Logged once here, where the error is produced, not by the widget
+    // that displays it.
+    AppLogger().warning('Search failed on every source',
+        tag: 'SearchProvider',
+        error: error,
+        metadata: {'failed': result.failedProviders, 'online': online});
+    throw error;
   }
-  return result.books;
+  return SearchResultPage(result.books,
+      failedSources: result.failedProviders,
+      resultSource: result.resultSource,
+      ignoredFilters: result.ignoredFilters,
+      clientSideFilters: result.clientSideFilters);
 });
 
 // Which sources the user turned on in settings.

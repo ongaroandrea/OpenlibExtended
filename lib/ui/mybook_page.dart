@@ -1,7 +1,7 @@
 import 'dart:async';
 // Flutter imports:
 import 'package:flutter/material.dart';
-import 'package:openlib/l10n/app_localizations.dart';
+import 'package:openlib/features/eink/eink.dart' show BusyIndicator;
 
 // Package imports:
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,8 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Project imports:
 import 'package:openlib/services/database.dart';
 import 'package:openlib/services/library_book_details.dart';
-import 'package:openlib/services/share_book.dart';
-import 'package:openlib/ui/components/snack_bar_widget.dart';
 import 'package:openlib/ui/components/book_info_widget.dart';
 import 'package:openlib/ui/components/file_buttons_widget.dart';
 
@@ -57,38 +55,6 @@ class _BookPageState extends ConsumerState<BookPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        actions: [
-          FutureBuilder(
-              future: bookInfo,
-              builder: (BuildContext context, AsyncSnapshot<MyBook?> snapshot) {
-                if (snapshot.hasData &&
-                    snapshot.data?.title != null &&
-                    snapshot.data?.link != null) {
-                  return IconButton(
-                    icon: Icon(
-                      Icons.share_sharp,
-                      color: Theme.of(context).colorScheme.tertiary,
-                    ),
-                    iconSize: 19.0,
-                    onPressed: () async {
-                      final outcome = await shareBook(snapshot.data!.title,
-                          snapshot.data!.link, snapshot.data?.thumbnail ?? '',
-                          fileName: snapshot.data?.fileName,
-                          format: snapshot.data?.format);
-                      if (context.mounted &&
-                          outcome == ShareOutcome.pathCopied) {
-                        showSnackBar(
-                            context: context,
-                            message:
-                                AppLocalizations.of(context).copiedBookPath);
-                      }
-                    },
-                  );
-                } else {
-                  return const SizedBox.shrink();
-                }
-              })
-        ],
       ),
       body: Consumer(
         builder: (BuildContext context, WidgetRef ref, _) {
@@ -115,7 +81,7 @@ class _BookPageState extends ConsumerState<BookPage> {
                       child: SizedBox(
                     width: 25,
                     height: 25,
-                    child: CircularProgressIndicator(
+                    child: BusyIndicator(
                       color: Theme.of(context).colorScheme.secondary,
                     ),
                   ));

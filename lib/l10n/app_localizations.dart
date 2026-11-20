@@ -560,6 +560,36 @@ abstract class AppLocalizations {
   /// **'Preview'**
   String get preview;
 
+  /// Dialog title before asking Android for All files access for a custom book folder
+  ///
+  /// In en, this message translates to:
+  /// **'Allow access to this folder?'**
+  String get folderAccessTitle;
+
+  /// Explains why All files access is needed for the chosen folder and that it is optional
+  ///
+  /// In en, this message translates to:
+  /// **'Android only lets apps save files in this folder with \"All files access\". OpenlibExtended uses it only to save, move and find books in the folder you chose.\n\nYou don\'t need it if you keep the current folder. Books still open in other reader apps.'**
+  String get folderAccessBody;
+
+  /// Button: go on and request the storage permission
+  ///
+  /// In en, this message translates to:
+  /// **'Allow'**
+  String get folderAccessAllow;
+
+  /// Button: cancel and keep using the current book folder
+  ///
+  /// In en, this message translates to:
+  /// **'Keep current folder'**
+  String get folderAccessKeep;
+
+  /// Snackbar when the chosen folder cannot be used
+  ///
+  /// In en, this message translates to:
+  /// **'No access to that folder. Books stay in the current folder.'**
+  String get folderAccessKeptCurrent;
+
   /// Settings tile title
   ///
   /// In en, this message translates to:
@@ -595,6 +625,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Manual Download Button'**
   String get manualDownloadButton;
+
+  /// Settings toggle for e-paper displays
+  ///
+  /// In en, this message translates to:
+  /// **'E-ink mode'**
+  String get einkMode;
+
+  /// Subtitle of the E-ink mode settings toggle
+  ///
+  /// In en, this message translates to:
+  /// **'For e-paper screens: no animations, ripples or spinners, scrolling stops with your finger, fewer progress updates'**
+  String get einkModeHint;
 
   /// Background challenge verification toggle
   ///
@@ -968,12 +1010,6 @@ abstract class AppLocalizations {
   /// **'Unable to open file!'**
   String get unableToOpenFile;
 
-  /// Button opening the book page on the source site
-  ///
-  /// In en, this message translates to:
-  /// **'Open in site'**
-  String get openInSite;
-
   /// Snackbar after deleting a book
   ///
   /// In en, this message translates to:
@@ -1076,12 +1112,6 @@ abstract class AppLocalizations {
   /// **'Genres'**
   String get genres;
 
-  /// Snackbar after copying a book's file path
-  ///
-  /// In en, this message translates to:
-  /// **'Copied the book path to your clipboard'**
-  String get copiedBookPath;
-
   /// Tooltip on the pause button
   ///
   /// In en, this message translates to:
@@ -1099,12 +1129,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cancel download'**
   String get cancelDownload;
-
-  /// Snackbar after copying a book link
-  ///
-  /// In en, this message translates to:
-  /// **'Copied the book link to your clipboard'**
-  String get copiedBookLink;
 
   /// Snackbar when no mirror can serve the book
   ///
@@ -1501,6 +1525,486 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Missing LibGen covers are fetched from the book\'s detail page.'**
   String get whatsNewFeatureCovers;
+
+  /// Settings switch: hardware volume keys turn pages in the built-in readers
+  ///
+  /// In en, this message translates to:
+  /// **'Volume keys turn pages'**
+  String get volumeKeysTurnPages;
+
+  /// Subtitle of the volume keys switch
+  ///
+  /// In en, this message translates to:
+  /// **'In the built-in readers, volume down goes to the next page and volume up to the previous one. On by default in E-ink mode'**
+  String get volumeKeysTurnPagesHint;
+
+  /// E-ink mode: button at the end of search results that loads the next page
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get loadMoreResults;
+
+  /// Title of the reader help overlay
+  ///
+  /// In en, this message translates to:
+  /// **'Reader controls'**
+  String get readerHelpTitle;
+
+  /// Reader help: tap zones heading
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the edges'**
+  String get readerHelpTapTitle;
+
+  /// Reader help: tap zones description
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the right edge for the next page, the left edge for the previous one'**
+  String get readerHelpTapBody;
+
+  /// Reader help: keyboard / page-turner keys heading
+  ///
+  /// In en, this message translates to:
+  /// **'Page keys'**
+  String get readerHelpKeysTitle;
+
+  /// Reader help: which keys turn pages
+  ///
+  /// In en, this message translates to:
+  /// **'Page Down, Right, Down or Space: next page. Page Up, Left, Up or Shift+Space: previous page'**
+  String get readerHelpKeysBody;
+
+  /// Reader help: volume keys heading
+  ///
+  /// In en, this message translates to:
+  /// **'Volume keys'**
+  String get readerHelpVolumeTitle;
+
+  /// Reader help: volume keys description
+  ///
+  /// In en, this message translates to:
+  /// **'Volume down: next page. Volume up: previous page'**
+  String get readerHelpVolumeBody;
+
+  /// Reader help: font size heading
+  ///
+  /// In en, this message translates to:
+  /// **'Text size'**
+  String get readerHelpTextSizeTitle;
+
+  /// Reader help: font size description
+  ///
+  /// In en, this message translates to:
+  /// **'Use the smaller and larger text buttons in the top bar'**
+  String get readerHelpTextSizeBody;
+
+  /// Reader help: table of contents heading
+  ///
+  /// In en, this message translates to:
+  /// **'Contents'**
+  String get readerHelpContentsTitle;
+
+  /// Reader help: how to open the table of contents
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe in from the right edge for the table of contents'**
+  String get readerHelpContentsBody;
+
+  /// Search page: placeholder in the main search field
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get searchFieldHint;
+
+  /// Search page: tooltip and screen-reader label of the submit button
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get searchSubmitTooltip;
+
+  /// Search page: tooltip of the button that clears the search field
+  ///
+  /// In en, this message translates to:
+  /// **'Clear search'**
+  String get searchClear;
+
+  /// Search page: snackbar when submitting an empty query
+  ///
+  /// In en, this message translates to:
+  /// **'Search field is empty'**
+  String get searchFieldEmpty;
+
+  /// Search filter label: content type
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get searchFilterType;
+
+  /// Search filter label: sort order
+  ///
+  /// In en, this message translates to:
+  /// **'Sort by'**
+  String get searchFilterSort;
+
+  /// Search filter label: file format
+  ///
+  /// In en, this message translates to:
+  /// **'File type'**
+  String get searchFilterFileType;
+
+  /// Search filter label: book language
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get searchFilterLanguage;
+
+  /// Search filter label: publication year
+  ///
+  /// In en, this message translates to:
+  /// **'Year published'**
+  String get searchFilterYear;
+
+  /// File type option: only formats the app can open (EPUB, PDF, CBR, CBZ). The default.
+  ///
+  /// In en, this message translates to:
+  /// **'Supported formats'**
+  String get searchFileTypeSupported;
+
+  /// Search filter option: no filtering
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get searchFilterAll;
+
+  /// Search type filter option
+  ///
+  /// In en, this message translates to:
+  /// **'Any books'**
+  String get searchTypeAnyBooks;
+
+  /// Search type filter option
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown books'**
+  String get searchTypeUnknownBooks;
+
+  /// Search type filter option
+  ///
+  /// In en, this message translates to:
+  /// **'Fiction books'**
+  String get searchTypeFiction;
+
+  /// Search type filter option
+  ///
+  /// In en, this message translates to:
+  /// **'Non-fiction books'**
+  String get searchTypeNonFiction;
+
+  /// Search type filter option
+  ///
+  /// In en, this message translates to:
+  /// **'Comic books'**
+  String get searchTypeComic;
+
+  /// Search type filter option
+  ///
+  /// In en, this message translates to:
+  /// **'Magazine'**
+  String get searchTypeMagazine;
+
+  /// Search type filter option
+  ///
+  /// In en, this message translates to:
+  /// **'Standards document'**
+  String get searchTypeStandardsDocument;
+
+  /// Search type filter option
+  ///
+  /// In en, this message translates to:
+  /// **'Journal article'**
+  String get searchTypeJournalArticle;
+
+  /// Search sort option
+  ///
+  /// In en, this message translates to:
+  /// **'Most relevant'**
+  String get searchSortMostRelevant;
+
+  /// Search sort option
+  ///
+  /// In en, this message translates to:
+  /// **'Newest'**
+  String get searchSortNewest;
+
+  /// Search sort option
+  ///
+  /// In en, this message translates to:
+  /// **'Oldest'**
+  String get searchSortOldest;
+
+  /// Search sort option
+  ///
+  /// In en, this message translates to:
+  /// **'Largest'**
+  String get searchSortLargest;
+
+  /// Search sort option
+  ///
+  /// In en, this message translates to:
+  /// **'Smallest'**
+  String get searchSortSmallest;
+
+  /// Search year filter option
+  ///
+  /// In en, this message translates to:
+  /// **'Before 1980'**
+  String get searchYearBefore1980;
+
+  /// Screen-reader label start for a search result card: book title and author
+  ///
+  /// In en, this message translates to:
+  /// **'{title}, by {author}'**
+  String cardTitleByAuthor(String title, String author);
+
+  /// Screen-reader label for the catalog a search result came from
+  ///
+  /// In en, this message translates to:
+  /// **'Source: {source}'**
+  String cardSource(String source);
+
+  /// Screen-reader label of the check badge on a result the user already downloaded
+  ///
+  /// In en, this message translates to:
+  /// **'Already downloaded'**
+  String get cardDownloadedBadge;
+
+  /// Heading of the advice box on the error screen
+  ///
+  /// In en, this message translates to:
+  /// **'What to do'**
+  String get errorWhatToDo;
+
+  /// Body of the VPN tip on the error screen
+  ///
+  /// In en, this message translates to:
+  /// **'A VPN can help get around regional blocks.'**
+  String get errorVpnHint;
+
+  /// Manual verification dialog body
+  ///
+  /// In en, this message translates to:
+  /// **'The site wants to check that you\'re human. We\'ll open a browser window where you can complete the check.'**
+  String get errorVerifyIntro;
+
+  /// Hint in the manual verification dialog
+  ///
+  /// In en, this message translates to:
+  /// **'When you\'re done, come back to the app and tap Try Again.'**
+  String get errorVerifyReturnHint;
+
+  /// Placeholder when a blocked page has no captured content
+  ///
+  /// In en, this message translates to:
+  /// **'No content available'**
+  String get errorNoContent;
+
+  /// Note appended to a truncated blocked-page dump
+  ///
+  /// In en, this message translates to:
+  /// **'… (truncated, {count} characters in total)'**
+  String errorTruncated(int count);
+
+  /// Error title: the device is offline
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re offline'**
+  String get errorNoInternetTitle;
+
+  /// Error advice: the device is offline
+  ///
+  /// In en, this message translates to:
+  /// **'Check that Wi-Fi or mobile data is on and airplane mode is off, then try again.'**
+  String get errorNoInternetBody;
+
+  /// Error title: request timed out
+  ///
+  /// In en, this message translates to:
+  /// **'The source took too long to respond'**
+  String get errorTimeoutTitle;
+
+  /// Error advice: request timed out
+  ///
+  /// In en, this message translates to:
+  /// **'Your connection may be slow, or the site is overloaded. Try again in a moment, or pick another source.'**
+  String get errorTimeoutBody;
+
+  /// Error title: server down
+  ///
+  /// In en, this message translates to:
+  /// **'The source isn\'t responding'**
+  String get errorServerUnavailableTitle;
+
+  /// Error advice: server down
+  ///
+  /// In en, this message translates to:
+  /// **'The site may be down for now. Try again in a few minutes, or pick a different mirror in Settings.'**
+  String get errorServerUnavailableBody;
+
+  /// Error title: DDoS-protection challenge
+  ///
+  /// In en, this message translates to:
+  /// **'The site wants to check you\'re human'**
+  String get errorBlockedTitle;
+
+  /// Error advice: DDoS-protection challenge
+  ///
+  /// In en, this message translates to:
+  /// **'Tap Verify in browser to pass the check, or try again in a few minutes. A different network or a VPN can also help.'**
+  String get errorBlockedBody;
+
+  /// Error title: access denied
+  ///
+  /// In en, this message translates to:
+  /// **'Access denied'**
+  String get errorForbiddenTitle;
+
+  /// Error advice: access denied
+  ///
+  /// In en, this message translates to:
+  /// **'The site refused the request. It may be blocked in your region; a VPN or a different mirror in Settings can help.'**
+  String get errorForbiddenBody;
+
+  /// Error title: rate limited
+  ///
+  /// In en, this message translates to:
+  /// **'Too many requests'**
+  String get errorRateLimitedTitle;
+
+  /// Error advice: rate limited
+  ///
+  /// In en, this message translates to:
+  /// **'Wait a few minutes, then try again.'**
+  String get errorRateLimitedBody;
+
+  /// Error title: TLS handshake failed
+  ///
+  /// In en, this message translates to:
+  /// **'Secure connection failed'**
+  String get errorSslTitle;
+
+  /// Error advice: TLS handshake failed
+  ///
+  /// In en, this message translates to:
+  /// **'Your network may be blocking secure connections. Try another network or a VPN.'**
+  String get errorSslBody;
+
+  /// Error title: DNS lookup failed
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t find the server'**
+  String get errorDnsTitle;
+
+  /// Error advice: DNS lookup failed
+  ///
+  /// In en, this message translates to:
+  /// **'Your network or provider may be blocking the site. Try changing DNS to 1.1.1.1, a VPN, or another network.'**
+  String get errorDnsBody;
+
+  /// Error title: unclassified failure
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong'**
+  String get errorUnknownTitle;
+
+  /// Error advice: unclassified failure
+  ///
+  /// In en, this message translates to:
+  /// **'Try again, or pick another source.'**
+  String get errorUnknownBody;
+
+  /// Error title: every search source failed while online
+  ///
+  /// In en, this message translates to:
+  /// **'No source responded'**
+  String get errorSourcesFailedTitle;
+
+  /// Error advice: every search source failed; lists them
+  ///
+  /// In en, this message translates to:
+  /// **'{sources} didn\'t respond. They may be down or blocked on your network. Try again, or try another network or a VPN.'**
+  String errorSourcesFailedBody(String sources);
+
+  /// Non-blocking notice above results when some sources failed
+  ///
+  /// In en, this message translates to:
+  /// **'{sources} didn\'t respond'**
+  String resultsSourcesDidNotRespond(String sources);
+
+  /// No-results state when some sources failed, so not everything was searched
+  ///
+  /// In en, this message translates to:
+  /// **'{sources} didn\'t respond, so not every source was searched.'**
+  String resultsNoMatchesSourcesDown(String sources);
+
+  /// No-results state hint when every source answered
+  ///
+  /// In en, this message translates to:
+  /// **'Check the spelling, try fewer words, or search another source.'**
+  String get resultsNoMatchesHint;
+
+  /// Button that resets every active search filter and searches again
+  ///
+  /// In en, this message translates to:
+  /// **'Clear filters'**
+  String get resultsClearFilters;
+
+  /// Button that opens a menu of other search sources
+  ///
+  /// In en, this message translates to:
+  /// **'Try another source'**
+  String get resultsTryAnotherSource;
+
+  /// Button that returns to the search field
+  ///
+  /// In en, this message translates to:
+  /// **'Edit search'**
+  String get resultsEditSearch;
+
+  /// Marker shown after the last page of results
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{End of results · 1 book} other{End of results · {count} books}}'**
+  String resultsEndOfList(int count);
+
+  /// Screen-reader label of the active filter chip row
+  ///
+  /// In en, this message translates to:
+  /// **'Active filters'**
+  String get resultsActiveFilters;
+
+  /// Label of one active filter chip: filter name and value
+  ///
+  /// In en, this message translates to:
+  /// **'{label}: {value}'**
+  String resultsFilterChip(String label, String value);
+
+  /// Tooltip of the remove button on an active filter chip
+  ///
+  /// In en, this message translates to:
+  /// **'Remove filter'**
+  String get resultsRemoveFilter;
+
+  /// Non-blocking note when the source that answered could not apply some active filters; filters is a comma-separated list of filter names
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{filters} isn\'t supported by {source}, so results aren\'t filtered by it.} other{{filters} aren\'t supported by {source}, so results aren\'t filtered by them.}}'**
+  String resultsFiltersIgnored(int count, String filters, String source);
+
+  /// Hint when sorting was applied by the app one results page at a time
+  ///
+  /// In en, this message translates to:
+  /// **'Sorted within each page of results'**
+  String get resultsSortedWithinPage;
 }
 
 class _AppLocalizationsDelegate

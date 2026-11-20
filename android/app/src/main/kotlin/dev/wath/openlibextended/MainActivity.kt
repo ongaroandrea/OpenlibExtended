@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.view.KeyEvent
 import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -11,8 +12,24 @@ import io.flutter.plugin.common.MethodChannel
 import java.io.File
 
 class MainActivity : FlutterActivity() {
+    // Volume keys as page keys: only while a reader screen has turned it on
+    // over "openlib/page_keys", so the volume keys work normally elsewhere.
+    private var pageKeysChannel: MethodChannel? = null
+    private var volumeKeyPaging = false
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        pageKeysChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger,
+            "openlib/page_keys").apply {
+            setMethodCallHandler { call, result ->
+                if (call.method == "setVolumeKeyPaging") {
+                    volumeKeyPaging = call.arguments as? Boolean ?: false
+                    result.success(null)
+                } else {
+                    result.notImplemented()
+                }
+            }
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "openlib/readers")
             .setMethodCallHandler { call, result ->
                 try {
@@ -45,6 +62,28 @@ class MainActivity : FlutterActivity() {
                     result.error("reader_unavailable", e.message, null)
                 }
             }
+    }
+
+    override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        pageKeysChannel?.setMethodCallHandler(null)
+        pageKeysChannel = null
+        volumeKeyPaging = false
+        super.cleanUpFlutterEngine(flutterEngine)
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val code = event.keyCode
+        if (volumeKeyPaging &&
+            (code == KeyEvent.KEYCODE_VOLUME_DOWN || code == KeyEvent.KEYCODE_VOLUME_UP)) {
+            // Swallow both down and up so the volume doesn't change; turn
+            // the page on down (repeats while held).
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                pageKeysChannel?.invokeMethod("pageKey",
+                    if (code == KeyEvent.KEYCODE_VOLUME_DOWN) "next" else "previous")
+            }
+            return true
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     @Suppress("DEPRECATION")

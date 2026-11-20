@@ -21,6 +21,8 @@ import 'package:url_launcher/url_launcher.dart';
 // Project imports:
 import 'package:openlib/services/database.dart';
 import 'package:openlib/services/logger.dart';
+import 'package:openlib/services/preference_store.dart';
+import 'package:openlib/services/startup_checks.dart';
 
 // Release information from GitHub
 class ReleaseInfo {
@@ -136,6 +138,13 @@ class UpdateCheckerService {
   final AppLogger _logger = AppLogger();
   final MyLibraryDb _database = MyLibraryDb.instance;
 
+  /// Last successful check; limits the automatic startup check to once
+  /// per [updateCheckInterval]. Manual checks always run.
+  final ThrottledCheck _checkThrottle = ThrottledCheck(
+      key: lastUpdateCheckKey,
+      every: updateCheckInterval,
+      store: DbPreferenceStore());
+
   // GitHub repository information - update these for your repo
   static const String _owner = "warreth";
   static const String _repo = "OpenlibExtended";
@@ -155,6 +164,9 @@ class UpdateCheckerService {
 
       // Fetch releases from GitHub API
       final releases = await _fetchReleases();
+      // GitHub answered: this counts as a successful check whatever it
+      // found, for both the manual button and the startup check.
+      await _checkThrottle.recordSuccess();
 
       if (releases.isEmpty) {
         _logger.info("No releases found", tag: "UpdateChecker");
@@ -1246,6 +1258,19 @@ class UpdateCheckerService {
         );
       },
     );
+  }
+
+  /// Startup entry point: checks for updates (and shows the dialog) only
+  /// when the last successful check is older than [updateCheckInterval].
+  /// A failed check records nothing, so the next launch retries.
+  Future<void> checkOnStartupIfDue(BuildContext context) async {
+    if (!await _checkThrottle.isDueNow()) {
+      _logger.debug("Startup update check skipped (not due)",
+          tag: "UpdateChecker");
+      return;
+    }
+    if (!context.mounted) return;
+    await checkAndShowUpdateDialog(context);
   }
 
   // Check for updates and show dialog if available

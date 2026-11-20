@@ -57,3 +57,7 @@ test/android-test.sh
 
 # Crash dumps from flutter_tester runs
 /core.*
+
+research_notes/
+
+reports/

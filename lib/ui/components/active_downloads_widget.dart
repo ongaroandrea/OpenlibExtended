@@ -1,6 +1,7 @@
 // Flutter imports:
 import 'package:flutter/material.dart';
 import 'package:openlib/l10n/app_localizations.dart';
+import 'package:openlib/features/eink/eink.dart' show BusyIndicator, BusyBar, EinkColors, EinkColorX;
 
 // Package imports:
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,8 +11,21 @@ import 'package:openlib/services/download_manager.dart';
 import 'package:openlib/state/state.dart';
 import 'package:openlib/ui/webview_page.dart';
 
-class ActiveDownloadsWidget extends ConsumerWidget {
+/// Shown on the Home, Search and Library tabs, which all stay mounted.
+/// While its tab is hidden (MainScreen turns TickerMode off there) the
+/// panel stops listening to download progress and keeps its last frame;
+/// when the tab shows again it rebuilds from the provider's latest snapshot.
+class ActiveDownloadsWidget extends ConsumerStatefulWidget {
   const ActiveDownloadsWidget({super.key});
+
+  @override
+  ConsumerState<ActiveDownloadsWidget> createState() =>
+      _ActiveDownloadsWidgetState();
+}
+
+class _ActiveDownloadsWidgetState
+    extends ConsumerState<ActiveDownloadsWidget> {
+  Widget _lastPanel = const SizedBox.shrink();
 
   String _bytesToFileSize(int bytes) {
     const int decimals = 1;
@@ -50,10 +64,13 @@ class ActiveDownloadsWidget extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    // Off-screen: no watch, so progress events don't rebuild this panel.
+    // Returning the same widget instance also skips rebuilding the subtree.
+    if (!TickerMode.valuesOf(context).enabled) return _lastPanel;
     final downloadsAsync = ref.watch(activeDownloadsProvider);
 
-    return downloadsAsync.when(
+    return _lastPanel = downloadsAsync.when(
       data: (downloads) {
         if (downloads.isEmpty) {
           return const SizedBox.shrink();
@@ -65,8 +82,10 @@ class ActiveDownloadsWidget extends ConsumerWidget {
             color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color:
-                  Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+              color: Theme.of(context)
+                  .colorScheme
+                  .outline
+                  .einkText(context, 0.2),
               width: 1.5,
             ),
             boxShadow: [
@@ -89,7 +108,10 @@ class ActiveDownloadsWidget extends ConsumerWidget {
                   color: Theme.of(context)
                       .colorScheme
                       .secondary
-                      .withValues(alpha: 0.1),
+                      .einkTint(context, 0.1),
+                  border: EinkColors.of(context).monochrome
+                      ? Border(bottom: EinkColors.of(context).outline)
+                      : null,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(12),
                     topRight: Radius.circular(12),
@@ -121,10 +143,10 @@ class ActiveDownloadsWidget extends ConsumerWidget {
                       ),
                       child: Text(
                         '${downloads.length}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: Colors.white.einkBg(context),
                         ),
                       ),
                     ),
@@ -146,7 +168,7 @@ class ActiveDownloadsWidget extends ConsumerWidget {
                     color: Theme.of(context)
                         .colorScheme
                         .outline
-                        .withValues(alpha: 0.2),
+                        .einkText(context, 0.2),
                   ),
                   itemBuilder: (context, index) {
                     final task = downloads.values.elementAt(index);
@@ -295,7 +317,8 @@ class _DownloadItemState extends ConsumerState<_DownloadItem> {
                 height: 36,
                 decoration: BoxDecoration(
                   color: _getStatusColor(task.status, context)
-                      .withValues(alpha: 0.15),
+                      .einkTint(context, 0.15),
+                  border: EinkColors.of(context).border,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Center(
@@ -336,7 +359,7 @@ class _DownloadItemState extends ConsumerState<_DownloadItem> {
                               color: Theme.of(context)
                                   .colorScheme
                                   .tertiary
-                                  .withAlpha(120),
+                                  .einkText(context, 120 / 255),
                             ),
                           ),
                           Flexible(
@@ -348,7 +371,7 @@ class _DownloadItemState extends ConsumerState<_DownloadItem> {
                                 color: Theme.of(context)
                                     .colorScheme
                                     .tertiary
-                                    .withAlpha(170),
+                                    .einkText(context, 170 / 255),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -363,7 +386,7 @@ class _DownloadItemState extends ConsumerState<_DownloadItem> {
                               color: Theme.of(context)
                                   .colorScheme
                                   .tertiary
-                                  .withAlpha(120),
+                                  .einkText(context, 120 / 255),
                             ),
                           ),
                           Flexible(
@@ -374,7 +397,7 @@ class _DownloadItemState extends ConsumerState<_DownloadItem> {
                                 color: Theme.of(context)
                                     .colorScheme
                                     .tertiary
-                                    .withAlpha(170),
+                                    .einkText(context, 170 / 255),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -395,7 +418,10 @@ class _DownloadItemState extends ConsumerState<_DownloadItem> {
                     Icons.pause_rounded,
                     size: 20,
                     color:
-                        Theme.of(context).colorScheme.tertiary.withAlpha(170),
+                        Theme.of(context)
+                        .colorScheme
+                        .tertiary
+                        .einkText(context, 170 / 255),
                   ),
                   onPressed: () {
                     downloadManager.pauseDownload(task.id);
@@ -413,7 +439,10 @@ class _DownloadItemState extends ConsumerState<_DownloadItem> {
                     Icons.play_arrow_rounded,
                     size: 20,
                     color:
-                        Theme.of(context).colorScheme.tertiary.withAlpha(170),
+                        Theme.of(context)
+                        .colorScheme
+                        .tertiary
+                        .einkText(context, 170 / 255),
                   ),
                   onPressed: () {
                     downloadManager.resumeDownload(task.id);
@@ -438,7 +467,10 @@ class _DownloadItemState extends ConsumerState<_DownloadItem> {
                     Icons.close_rounded,
                     size: 20,
                     color:
-                        Theme.of(context).colorScheme.tertiary.withAlpha(170),
+                        Theme.of(context)
+                        .colorScheme
+                        .tertiary
+                        .einkText(context, 170 / 255),
                   ),
                   onPressed: () {
                     downloadManager.cancelDownload(task.id);
@@ -458,8 +490,11 @@ class _DownloadItemState extends ConsumerState<_DownloadItem> {
               child: LinearProgressIndicator(
                 value: task.progress,
                 minHeight: 6,
-                backgroundColor:
-                    Theme.of(context).colorScheme.tertiary.withAlpha(30),
+                backgroundColor: Theme.of(context)
+                    .colorScheme
+                    .tertiary
+                    .einkTint(context, 30 / 255,
+                        mono: EinkColors.of(context).track),
                 color: Theme.of(context).colorScheme.secondary,
               ),
             ),
@@ -481,7 +516,10 @@ class _DownloadItemState extends ConsumerState<_DownloadItem> {
                     fontSize: 10,
                     fontWeight: FontWeight.w500,
                     color:
-                        Theme.of(context).colorScheme.tertiary.withAlpha(140),
+                        Theme.of(context)
+                        .colorScheme
+                        .tertiary
+                        .einkText(context, 140 / 255),
                   ),
                 ),
               ],
@@ -492,10 +530,13 @@ class _DownloadItemState extends ConsumerState<_DownloadItem> {
               task.status == DownloadStatus.verifying) ...[
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
-              child: LinearProgressIndicator(
+              child: BusyBar(
                 minHeight: 6,
-                backgroundColor:
-                    Theme.of(context).colorScheme.tertiary.withAlpha(30),
+                backgroundColor: Theme.of(context)
+                    .colorScheme
+                    .tertiary
+                    .einkTint(context, 30 / 255,
+                        mono: EinkColors.of(context).track),
                 color: Theme.of(context).colorScheme.secondary,
               ),
             ),
@@ -507,28 +548,28 @@ class _DownloadItemState extends ConsumerState<_DownloadItem> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.1),
+                  color: Colors.orange.einkTint(context, 0.1),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: Colors.orange.withValues(alpha: 0.3),
-                    width: 1,
+                    color: Colors.orange.einkText(context, 0.3),
+                    width: EinkColors.of(context).monochrome ? 1.5 : 1,
                   ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.warning_amber_rounded,
                       size: 14,
-                      color: Colors.orange,
+                      color: Colors.orange.einkFg(context),
                     ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         task.errorMessage ?? 'Manual verification required',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
-                          color: Colors.orange,
+                          color: Colors.orange.einkFg(context),
                         ),
                       ),
                     ),
@@ -536,27 +577,27 @@ class _DownloadItemState extends ConsumerState<_DownloadItem> {
                     TextButton(
                       onPressed: _isVerifying ? null : _triggerVerification,
                       style: TextButton.styleFrom(
-                        backgroundColor: Colors.orange,
+                        backgroundColor: Colors.orange.einkFg(context),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 4),
                         minimumSize: const Size(40, 24),
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       child: _isVerifying
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 12,
                               height: 12,
-                              child: CircularProgressIndicator(
+                              child: BusyIndicator(
                                 strokeWidth: 2,
-                                color: Colors.white,
+                                color: Colors.white.einkBg(context),
                               ),
                             )
-                          : const Text(
+                          : Text(
                               'Verify',
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                color: Colors.white.einkBg(context),
                               ),
                             ),
                     ),
@@ -569,28 +610,28 @@ class _DownloadItemState extends ConsumerState<_DownloadItem> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.1),
+                  color: Colors.red.einkTint(context, 0.1),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: Colors.red.withValues(alpha: 0.3),
-                    width: 1,
+                    color: Colors.red.einkText(context, 0.3),
+                    width: EinkColors.of(context).monochrome ? 1.5 : 1,
                   ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.error_outline,
                       size: 14,
-                      color: Colors.red,
+                      color: Colors.red.einkFg(context),
                     ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         task.errorMessage ?? 'Download failed',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
-                          color: Colors.red,
+                          color: Colors.red.einkFg(context),
                         ),
                       ),
                     ),
@@ -600,18 +641,18 @@ class _DownloadItemState extends ConsumerState<_DownloadItem> {
                         downloadManager.retryDownload(task.id);
                       },
                       style: TextButton.styleFrom(
-                        backgroundColor: Colors.red,
+                        backgroundColor: Colors.red.einkFg(context),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 4),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      child: const Text(
+                      child: Text(
                         'Retry',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: Colors.white.einkBg(context),
                         ),
                       ),
                     ),
@@ -637,7 +678,7 @@ class _DownloadItemState extends ConsumerState<_DownloadItem> {
         return SizedBox(
           width: 16,
           height: 16,
-          child: CircularProgressIndicator(
+          child: BusyIndicator(
             strokeWidth: 2,
             color: _getStatusColor(status, context),
           ),
@@ -646,7 +687,7 @@ class _DownloadItemState extends ConsumerState<_DownloadItem> {
         return SizedBox(
           width: 16,
           height: 16,
-          child: CircularProgressIndicator(
+          child: BusyIndicator(
             strokeWidth: 2,
             color: _getStatusColor(status, context),
           ),
@@ -667,7 +708,7 @@ class _DownloadItemState extends ConsumerState<_DownloadItem> {
         return SizedBox(
           width: 16,
           height: 16,
-          child: CircularProgressIndicator(
+          child: BusyIndicator(
             strokeWidth: 2,
             color: _getStatusColor(status, context),
           ),
@@ -693,24 +734,29 @@ class _DownloadItemState extends ConsumerState<_DownloadItem> {
     }
   }
 
+  // Every status also has its own icon (_buildStatusIcon) and label
+  // (getStatusText), so it still reads in greyscale; the e-ink theme turns
+  // these colours into its foreground.
   Color _getStatusColor(DownloadStatus status, BuildContext context) {
+    final Color color;
     switch (status) {
       case DownloadStatus.queued:
-        return Colors.orange;
+        color = Colors.orange;
       case DownloadStatus.fetchingMirrors:
       case DownloadStatus.downloadingMirrors:
       case DownloadStatus.downloading:
-        return Theme.of(context).colorScheme.secondary;
+        color = Theme.of(context).colorScheme.secondary;
       case DownloadStatus.paused:
-        return Colors.amber;
+        color = Colors.amber;
       case DownloadStatus.verifying:
-        return Colors.blue;
+        color = Colors.blue;
       case DownloadStatus.completed:
-        return Colors.green;
+        color = Colors.green;
       case DownloadStatus.failed:
-        return Colors.red;
+        color = Colors.red;
       case DownloadStatus.cancelled:
-        return Colors.grey;
+        color = Colors.grey;
     }
+    return color.einkFg(context);
   }
 }

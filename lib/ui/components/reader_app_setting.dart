@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:openlib/l10n/app_localizations.dart';
+import 'package:openlib/features/eink/eink.dart' show BusyBar;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openlib/services/reader_apps.dart';
 import 'package:openlib/state/state.dart'
@@ -42,7 +43,7 @@ class _ReaderAppSettingState extends ConsumerState<ReaderAppSetting> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: preference.when(
-        loading: () => const LinearProgressIndicator(),
+        loading: () => const BusyBar(),
         error: (_, __) => TextButton(
             onPressed: () =>
                 ref.invalidate(readerPreferenceProvider(widget.format)),

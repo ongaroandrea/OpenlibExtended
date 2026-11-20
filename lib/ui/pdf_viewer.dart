@@ -7,7 +7,16 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HardwareKeyboard;
 import 'package:openlib/l10n/app_localizations.dart';
+import 'package:openlib/features/eink/eink.dart'
+    show
+        BusyIndicator,
+        PageTurn,
+        PageTurnKeys,
+        einkModeProvider,
+        pageTurnForKey,
+        volumeKeyPagingProvider;
 
 // Package imports:
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -118,17 +127,32 @@ class _PdfViewPageState extends ConsumerState<PdfViewPage> {
     }
   }
 
+  /// Goes to the next / previous page. Jumps in E-ink mode or with
+  /// system animations off, so the panel redraws once.
+  void _turnPage(PageTurn turn) {
+    if (!_controller.isReady) return;
+    final current = _controller.pageNumber ?? 1;
+    final target = (current + (turn == PageTurn.next ? 1 : -1))
+        .clamp(1, _controller.pageCount);
+    if (target == current) return;
+    final animate = !MediaQuery.disableAnimationsOf(context) &&
+        !ref.read(einkModeProvider);
+    _controller.goToPage(
+        pageNumber: target,
+        duration:
+            animate ? const Duration(milliseconds: 200) : Duration.zero);
+  }
+
   @override
   Widget build(BuildContext context) {
     final filePath = ref.watch(filePathProvider(widget.fileName));
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final volumeKeys = ref.watch(volumeKeyPagingProvider);
 
     return Scaffold(
       appBar: AppBar(
-        // Use surface color in dark mode so it's not white
-        backgroundColor: isDarkMode
-            ? Theme.of(context).colorScheme.surface
-            : Theme.of(context).colorScheme.primary,
+        // Surface, not primary: light primary is white (same look today)
+        // but is black in E-ink mode, which would hide the black title.
+        backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(AppLocalizations.of(context).appTitle),
         titleTextStyle: Theme.of(context).textTheme.displayLarge,
         leading: IconButton(
@@ -139,8 +163,7 @@ class _PdfViewPageState extends ConsumerState<PdfViewPage> {
         actions: [
           IconButton(
             tooltip: AppLocalizations.of(context).previousPage,
-            onPressed: () => _controller.goToPage(
-                pageNumber: (_controller.pageNumber ?? 1) - 1),
+            onPressed: () => _turnPage(PageTurn.previous),
             icon: Icon(Icons.arrow_left,
                 size: 25, color: Theme.of(context).colorScheme.tertiary),
           ),
@@ -159,14 +182,19 @@ class _PdfViewPageState extends ConsumerState<PdfViewPage> {
           ),
           IconButton(
             tooltip: AppLocalizations.of(context).nextPage,
-            onPressed: () => _controller.goToPage(
-                pageNumber: (_controller.pageNumber ?? 0) + 1),
+            onPressed: () => _turnPage(PageTurn.next),
             icon: Icon(Icons.arrow_right,
                 size: 25, color: Theme.of(context).colorScheme.tertiary),
           ),
         ],
       ),
-      body: filePath.when(
+      // Page keys (PageUp/PageDown, arrows, Space, volume keys when
+      // enabled) go a whole page; pdfrx's own key handler gets the same
+      // mapping through onKey while the page has focus.
+      body: PageTurnKeys(
+        onTurn: _turnPage,
+        volumeKeys: volumeKeys,
+        child: filePath.when(
         data: (path) => ref.watch(getBookPosition(widget.fileName)).when(
               data: (saved) {
                 return PdfViewer.file(
@@ -178,6 +206,13 @@ class _PdfViewPageState extends ConsumerState<PdfViewPage> {
                         // Default keeps trailing pages waiting 100ms;
                         // loading them immediately feels snappier.
                         trailingPageLoadingDelay: Duration.zero),
+                    onKey: (params, key, isRealKeyPress) {
+                      final turn = pageTurnForKey(key,
+                          shift: HardwareKeyboard.instance.isShiftPressed);
+                      if (turn == null) return null;
+                      _turnPage(turn);
+                      return true;
+                    },
                     onPageChanged: (page) {
                       // Real-time page indicator; _savePosition
                       // debounces the actual disk writes.
@@ -196,7 +231,7 @@ class _PdfViewPageState extends ConsumerState<PdfViewPage> {
               error: (err, stack) =>
                   Center(child: Text("Error loading book: $err")),
               loading: () => Center(
-                child: CircularProgressIndicator(
+                child: BusyIndicator(
                   color: Theme.of(context).colorScheme.secondary,
                 ),
               ),
@@ -204,7 +239,7 @@ class _PdfViewPageState extends ConsumerState<PdfViewPage> {
         error: (error, stack) {
           return Scaffold(
             appBar: AppBar(
-              backgroundColor: Theme.of(context).colorScheme.primary,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               title: Text(AppLocalizations.of(context).appTitle),
               titleTextStyle: Theme.of(context).textTheme.displayLarge,
             ),
@@ -214,7 +249,7 @@ class _PdfViewPageState extends ConsumerState<PdfViewPage> {
         loading: () {
           return Scaffold(
             appBar: AppBar(
-              backgroundColor: Theme.of(context).colorScheme.primary,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               title: Text(AppLocalizations.of(context).appTitle),
               titleTextStyle: Theme.of(context).textTheme.displayLarge,
             ),
@@ -222,13 +257,14 @@ class _PdfViewPageState extends ConsumerState<PdfViewPage> {
               child: SizedBox(
                 width: 25,
                 height: 25,
-                child: CircularProgressIndicator(
+                child: BusyIndicator(
                   color: Theme.of(context).colorScheme.secondary,
                 ),
               ),
             ),
           );
         },
+      ),
       ),
     );
   }

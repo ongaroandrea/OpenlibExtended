@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/preference_store.dart';
 import 'package:openlib/services/slum_catalogue.dart';
+import 'package:openlib/services/startup_checks.dart';
 
 // MirrorService and the SLUM model live in the catalogue; re-exported so
 // callers keep importing only this file.
@@ -67,15 +68,31 @@ class InstanceManager {
 
   InstanceManager._internal()
       : _catalogue = SlumCatalogue(store: DbPreferenceStore()),
-        _store = DbPreferenceStore();
+        _store = DbPreferenceStore(),
+        _refreshThrottle = ThrottledCheck(
+            key: lastMirrorRefreshKey,
+            every: mirrorRefreshInterval,
+            store: DbPreferenceStore());
 
-  /// Tests build their own with an injected catalogue/store.
-  InstanceManager.forTest({SlumCatalogue? catalogue, PreferenceStore? store})
+  /// Tests build their own with an injected catalogue/store/clock.
+  InstanceManager.forTest(
+      {SlumCatalogue? catalogue,
+      PreferenceStore? store,
+      DateTime Function()? clock})
       : _catalogue = catalogue ?? SlumCatalogue(),
-        _store = store;
+        _store = store,
+        _refreshThrottle = ThrottledCheck(
+            key: lastMirrorRefreshKey,
+            every: mirrorRefreshInterval,
+            store: store,
+            clock: clock);
 
   final SlumCatalogue _catalogue;
   final PreferenceStore? _store;
+
+  /// Last successful open-slum.org refresh; limits the automatic startup
+  /// refresh to once per [mirrorRefreshInterval].
+  final ThrottledCheck _refreshThrottle;
   final AppLogger _logger = AppLogger();
 
   static const String _autoModeKey = 'instance_auto_mode';
@@ -251,6 +268,9 @@ class InstanceManager {
     }
     _logger.info('Mirror list refreshed from open-slum.org',
         tag: 'InstanceManager', metadata: {'changes': changes.length});
+    // Manual refreshes (and the upgrade screen) always run; a success
+    // also resets the startup throttle.
+    if (_catalogue.lastFetchReachedSlum) await _refreshThrottle.recordSuccess();
     return MirrorRefreshResult(
       changes: changes,
       hasMirrorList: _catalogue.lastFetchSucceeded,
@@ -259,13 +279,37 @@ class InstanceManager {
 
   /// Warms the catalogue at startup so the first search does not wait on
   /// open-slum.org. Never throws.
-  Future<void> refreshOnStartup() async {
+  ///
+  /// Restores the persisted list, then contacts open-slum.org only when
+  /// the last successful refresh is older than [mirrorRefreshInterval] or
+  /// no list is cached at all. The timestamp is recorded only when SLUM
+  /// answered, so an offline launch retries next time. Returns true when
+  /// a network refresh was attempted.
+  Future<bool> refreshOnStartup() async {
     try {
       await _catalogue.restore();
+      final due = shouldRefreshMirrors(
+        hasCachedMirrors: _catalogue.hasCachedSites,
+        last: await _refreshThrottle.lastSuccess(),
+        now: _refreshThrottle.now(),
+      );
+      if (!due) {
+        _logger.debug('Startup mirror refresh skipped (not due)',
+            tag: 'InstanceManager');
+        return false;
+      }
       await _catalogue.fetchAll();
+      if (_catalogue.lastFetchReachedSlum) {
+        await _refreshThrottle.recordSuccess();
+      }
+      return true;
     } catch (e) {
       _logger.warning('Startup mirror refresh failed',
           tag: 'InstanceManager', error: e);
+      return false;
     }
   }
+
+  /// When the mirror list was last refreshed from open-slum.org.
+  Future<DateTime?> lastRefreshSuccess() => _refreshThrottle.lastSuccess();
 }

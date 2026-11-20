@@ -6,31 +6,10 @@ import 'package:openlib/core/book_description.dart';
 // Package imports:
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 // Project imports:
-import 'package:openlib/state/state.dart' show annaArchiveBaseUrlProvider;
-
-/// The URL the "open in site" button opens for a book.
-///
-/// A real md5 (32 hex) means Anna's Archive carries the book under that
-/// id, so the button opens the AA page. Z-Library results carry a short
-/// book id, not an md5, and have no Anna's Archive page - pointing at AA
-/// for them lands on the error the user sees as "link expired". Those
-/// open their own source page instead. Null (a disabled button) only when
-/// neither target is available.
-@visibleForTesting
-String? openInSiteUrl({
-  required String link,
-  required String md5,
-  String? annaArchiveBaseUrl,
-}) {
-  final hasMd5 = RegExp(r'^[0-9a-f]{32}$', caseSensitive: false).hasMatch(md5);
-  if (hasMd5 && annaArchiveBaseUrl != null && annaArchiveBaseUrl.isNotEmpty) {
-    return '$annaArchiveBaseUrl/md5/$md5';
-  }
-  return link.isEmpty ? null : link;
-}
+import 'package:openlib/features/eink/eink.dart' show EinkColors, EinkColorX;
+import 'package:openlib/ui/components/cover_image.dart';
 
 class BookInfoWidget extends ConsumerWidget {
   final Widget child;
@@ -40,17 +19,6 @@ class BookInfoWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // The Anna's Archive base URL comes from the catalogue provider, so
-    // build() starts no I/O of its own (that used to leave pending timers
-    // in widget tests) and a test can stub the resolved mirror. It is only
-    // used for books that really have an md5; Z-Library books open on
-    // their own page instead (see [openInSiteUrl]).
-    final aaBaseUrl = ref.watch(annaArchiveBaseUrlProvider).valueOrNull;
-    final siteUrl = openInSiteUrl(
-      link: (data.link ?? '').toString(),
-      md5: (data.md5 ?? '').toString(),
-      annaArchiveBaseUrl: aaBaseUrl,
-    );
     final description =
         normalizedBookDescription(data.description as String?) ??
             AppLocalizations.of(context).noDescriptionAvailable;
@@ -79,6 +47,7 @@ class BookInfoWidget extends ConsumerWidget {
                   child: CachedNetworkImage(
                     height: 230,
                     width: 170,
+                    memCacheWidth: coverCacheWidth(context, 170),
                     imageUrl: thumbnail,
                     // libgen.li serves /covers/ only with an ads.php
                     // Referer; the book page itself is a valid one.
@@ -91,14 +60,15 @@ class BookInfoWidget extends ConsumerWidget {
                             const BorderRadius.all(Radius.circular(10)),
                         image: DecorationImage(
                           image: imageProvider,
-                          fit: BoxFit.fill,
+                          fit: BoxFit.cover,
                         ),
                       ),
                     ),
                     placeholder: (context, url) => Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(10),
-                        color: Colors.grey,
+                        color: coverPlaceholderColor(context, Colors.grey),
+                        border: EinkColors.of(context).border,
                       ),
                       height: 230,
                       width: 170,
@@ -107,7 +77,8 @@ class BookInfoWidget extends ConsumerWidget {
                       return Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(10),
-                          color: Colors.grey,
+                          color: coverPlaceholderColor(context, Colors.grey),
+                          border: EinkColors.of(context).border,
                         ),
                         height: 230,
                         width: 170,
@@ -118,7 +89,7 @@ class BookInfoWidget extends ConsumerWidget {
                     },
                   ),
                 ),
-                // Title row with AA button inline
+                // Title
                 Padding(
                   padding: const EdgeInsets.only(top: 15, bottom: 0),
                   child: Row(
@@ -136,34 +107,6 @@ class BookInfoWidget extends ConsumerWidget {
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      OutlinedButton.icon(
-                        icon: const Icon(Icons.open_in_new, size: 18),
-                        label: Text(AppLocalizations.of(context).openInSite,
-                            style: const TextStyle(fontSize: 13)),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor:
-                              Theme.of(context).colorScheme.tertiary,
-                          side: BorderSide(
-                              color: Theme.of(context).colorScheme.tertiary),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 6),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        onPressed: siteUrl == null
-                            ? null
-                            : () async {
-                                if (await canLaunchUrl(Uri.parse(siteUrl))) {
-                                  await launchUrl(Uri.parse(siteUrl),
-                                      mode: LaunchMode.externalApplication);
-                                } else if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                        content:
-                                            Text('Could not open the link.')),
-                                  );
-                                }
-                              },
                       ),
                     ],
                   ),
@@ -190,7 +133,7 @@ class BookInfoWidget extends ConsumerWidget {
                       .textTheme
                       .headlineSmall!
                       .color!
-                      .withAlpha(155),
+                      .einkText(context, 155 / 255),
                   maxLines: 4,
                 ),
                 // child slot of page
@@ -219,7 +162,7 @@ class BookInfoWidget extends ConsumerWidget {
                           color: Theme.of(context)
                               .colorScheme
                               .tertiary
-                              .withAlpha(150),
+                              .einkText(context, 150 / 255),
                           letterSpacing: 1.5,
                         ),
                       ),

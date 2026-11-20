@@ -160,17 +160,36 @@ Future<void> moveFilesToAndroidInternalStorage() async {
   }
 }
 
+/// Formats the app can open itself (EPUB, PDF in the built-in readers;
+/// CBR/CBZ handed to another app). Also the formats the search page's
+/// default "Supported formats" filter asks for, and the only ones the
+/// library sync adds as new entries from files found in the folder.
+const supportedBookExtensions = ['epub', 'pdf', 'cbr', 'cbz'];
+
+/// Common e-book and document formats a library file can have. Folder
+/// moves carry all of these, so a downloaded MOBI or AZW3 travels with
+/// the rest of the library instead of being left behind.
+const bookFileExtensions = {
+  ...supportedBookExtensions,
+  'mobi', 'azw', 'azw3', 'azw4', 'kfx', 'fb2', 'fbz', 'djvu', 'djv',
+  'lit', 'lrf', 'pdb', 'prc', 'chm', 'cb7', 'cbt', 'htmlz', 'txtz',
+  // Plain documents (txt, rtf, doc, docx, odt) are left out: in a shared
+  // folder they are as likely to be the user's own files as books.
+};
+
+String _extensionOf(String fileName) {
+  final dot = fileName.lastIndexOf('.');
+  return dot < 0 ? '' : fileName.substring(dot + 1).toLowerCase();
+}
+
 Future<void> moveLibraryFiles(String sourcePath, String destinationPath) async {
   final source = Directory(sourcePath);
   if (!await source.exists()) return;
 
-  // Allowed extensions for books
-  final allowedExtensions = ['.pdf', '.epub', '.cbr', '.cbz'];
-
   await for (final entity in source.list(recursive: false)) {
     if (entity is File) {
-      final path = entity.path.toLowerCase();
-      if (allowedExtensions.any((ext) => path.endsWith(ext))) {
+      final name = entity.path.split(Platform.pathSeparator).last;
+      if (bookFileExtensions.contains(_extensionOf(name))) {
         try {
           final fileName = entity.path.split(Platform.pathSeparator).last;
           final newPath = '$destinationPath${Platform.pathSeparator}$fileName';
@@ -239,9 +258,11 @@ Future<void> deleteFileWithDbData(Ref ref, String md5, String format,
   }
 }
 
-// Syncs the library database with actual files on disk
-// Removes entries for files that no longer exist and adds new files found
-// Returns the number of changes made
+// Syncs the library database with actual files on disk.
+// Removes entries whose file no longer exists - whatever its format, so a
+// downloaded MOBI or AZW3 that is still there stays in the library - and
+// adds entries for new files the app can open ([supportedBookExtensions]).
+// Returns the number of changes made.
 Future<int> syncLibraryWithDisk() async {
   int changes = 0;
   try {
@@ -256,23 +277,16 @@ Future<int> syncLibraryWithDisk() async {
     // Get all books from database
     final booksInDb = await dataBase.getAll();
 
-    // Get all book files on disk
+    // Every file in the folder, by name.
     final filesOnDisk = <String>{};
     final files = directory.listSync(recursive: false);
     for (var entity in files) {
       if (entity is File) {
-        final fileName = entity.path.split('/').last;
-        final extension = fileName.split('.').last.toLowerCase();
-        if (extension == 'epub' ||
-            extension == 'pdf' ||
-            extension == 'cbr' ||
-            extension == 'cbz') {
-          filesOnDisk.add(fileName);
-        }
+        filesOnDisk.add(entity.path.split(Platform.pathSeparator).last);
       }
     }
 
-    // Remove database entries for files that no longer exist
+    // Remove database entries whose file is really gone.
     for (var book in booksInDb) {
       // Use actual fileName from database if available, otherwise fall back to id.format
       final fileName = book.getFileName();
@@ -286,6 +300,7 @@ Future<int> syncLibraryWithDisk() async {
     // Add new files that are not in database (only for legacy md5.format named files)
     final existingFileNames = booksInDb.map((b) => b.getFileName()).toSet();
     for (var fileName in filesOnDisk) {
+      if (!supportedBookExtensions.contains(_extensionOf(fileName))) continue;
       if (!existingFileNames.contains(fileName)) {
         final parts = fileName.split('.');
         if (parts.length >= 2) {

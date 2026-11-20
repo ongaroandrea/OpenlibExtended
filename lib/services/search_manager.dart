@@ -73,6 +73,14 @@ class SearchQuery {
 
   bool get isEmpty =>
       text.trim().isEmpty && author.trim().isEmpty && publisher.trim().isEmpty;
+
+  /// The wanted formats, lowercased. [fileType] may list several,
+  /// comma-separated (the "Supported formats" filter); empty means any.
+  List<String> get fileTypes => fileType
+      .split(',')
+      .map((t) => t.trim().toLowerCase())
+      .where((t) => t.isNotEmpty)
+      .toList();
 }
 
 /// The plain-HTML header most library mirrors expect from a browser.
@@ -282,14 +290,19 @@ class LibgenProvider implements SearchProvider {
       if (publisher.isNotEmpty) params.write('&columns[]=p');
     }
     if (query.filtersEnabled) {
-      if (query.fileType.isNotEmpty) {
-        params.write('&extension=${Uri.encodeQueryComponent(query.fileType)}');
+      // LibGen takes a single extension; a list is filtered client-side.
+      if (query.fileTypes.length == 1) {
+        params.write(
+            '&extension=${Uri.encodeQueryComponent(query.fileTypes.single)}');
       }
       if (query.language.isNotEmpty) {
         params.write('&language=${Uri.encodeQueryComponent(query.language)}');
       }
-      if (query.year.isNotEmpty) {
-        params.write('&year=${Uri.encodeQueryComponent(query.year)}');
+      // libgen's year field takes one year. Ranges ("2010-2014") and
+      // "Before 1980" are applied to the parsed rows by the manager
+      // instead of being sent as a value the server cannot read.
+      if (RegExp(r'^\d{4}$').hasMatch(query.year.trim())) {
+        params.write('&year=${Uri.encodeQueryComponent(query.year.trim())}');
       }
     }
     if (query.page > 1) {
@@ -415,8 +428,8 @@ class ZlibraryProvider implements SearchProvider {
     final parameters = <String, dynamic>{
       if (query.page > 1) 'page': query.page,
       if (query.filtersEnabled && language != null) 'languages[]': language,
-      if (query.filtersEnabled && query.fileType.isNotEmpty)
-        'extensions[]': query.fileType.toUpperCase(),
+      if (query.filtersEnabled && query.fileTypes.isNotEmpty)
+        'extensions[]': [for (final t in query.fileTypes) t.toUpperCase()],
     };
 
     for (final mirror in mirrors) {
@@ -472,10 +485,9 @@ class ZlibraryProvider implements SearchProvider {
           if (!query.filtersEnabled) return true;
           final matchesLanguage = language == null ||
               bookLanguageName(book.info)?.toLowerCase() == language;
-          final matchesType = query.fileType.isEmpty ||
-              (book.info ?? '')
-                  .toLowerCase()
-                  .contains(query.fileType.toLowerCase());
+          final info = (book.info ?? '').toLowerCase();
+          final matchesType = query.fileTypes.isEmpty ||
+              query.fileTypes.any(info.contains);
           return matchesLanguage && matchesType;
         }).toList();
         if (books.isNotEmpty) {
@@ -1416,10 +1428,279 @@ class SearchManagerResult {
   /// stops at the first provider with results.
   final String resultSource;
 
+  /// Active filters the source in [resultSource] could not apply, neither
+  /// on its server nor on its parsed results (for example Type on
+  /// Library Genesis). The books are shown unfiltered for these; the UI
+  /// should say so instead of implying the filter worked. Empty when no
+  /// filter is active, every filter was honoured, or nothing was found.
+  final Set<SearchFilter> ignoredFilters;
+
+  /// Active filters that were applied by the app to the parsed results
+  /// of [resultSource] rather than by its server. Sorting applied here
+  /// orders one results page at a time, not the whole catalog.
+  final Set<SearchFilter> clientSideFilters;
+
   const SearchManagerResult(
       {required this.books,
       required this.failedProviders,
-      this.resultSource = ''});
+      this.resultSource = '',
+      this.ignoredFilters = const {},
+      this.clientSideFilters = const {}});
+}
+
+/// The user-facing search filters, as named on the search page.
+enum SearchFilter { type, sort, fileType, language, year, author, publisher }
+
+/// The filters [query] actually asks for (non-default values only).
+Set<SearchFilter> activeSearchFilters(SearchQuery query) {
+  if (!query.filtersEnabled) return const {};
+  return {
+    if (query.content.isNotEmpty) SearchFilter.type,
+    if (query.sort.isNotEmpty) SearchFilter.sort,
+    if (query.fileType.isNotEmpty) SearchFilter.fileType,
+    if (query.language.isNotEmpty) SearchFilter.language,
+    if (query.year.isNotEmpty) SearchFilter.year,
+    if (query.author.trim().isNotEmpty) SearchFilter.author,
+    if (query.publisher.trim().isNotEmpty) SearchFilter.publisher,
+  };
+}
+
+/// Filters each source's backend applies to the request itself.
+///
+/// Anna's Archive takes every filter in its URL. Library Genesis takes
+/// extension, language, a single year and author/publisher columns.
+/// Z-Library takes language and extension. WeLib takes only the text.
+Set<SearchFilter> serverSideFilters(SearchProviderId id, SearchQuery query) {
+  switch (id) {
+    case SearchProviderId.annasArchive:
+      return SearchFilter.values.toSet();
+    case SearchProviderId.libgen:
+      return {
+        if (query.fileTypes.length <= 1) SearchFilter.fileType,
+        SearchFilter.language,
+        if (RegExp(r'^\d{4}$').hasMatch(query.year.trim())) SearchFilter.year,
+        SearchFilter.author,
+        SearchFilter.publisher,
+      };
+    case SearchProviderId.zlibrary:
+      return {SearchFilter.fileType, SearchFilter.language};
+    case SearchProviderId.welib:
+      return const {};
+  }
+}
+
+/// Outcome of [applyClientFilters].
+@immutable
+class ClientFilterOutcome {
+  final List<BookData> books;
+  final Set<SearchFilter> ignored;
+  final Set<SearchFilter> clientSide;
+
+  const ClientFilterOutcome(this.books, this.ignored, this.clientSide);
+}
+
+/// Applies the active filters to one source's parsed [books].
+///
+/// Language is always checked against the result metadata (every source,
+/// as before). File type, year and sort are applied here for sources
+/// whose backend does not take them, reading `info` ("English, EPUB,
+/// 2.1 MB, 1968"). A filter is only applied when at least one result
+/// carries the data it needs; otherwise it is reported as ignored rather
+/// than emptying the list. Type, author and publisher cannot be read from
+/// a result row, so a source that does not send them reports them
+/// ignored. With no active filter the list is returned untouched.
+ClientFilterOutcome applyClientFilters(
+    SearchProviderId id, List<BookData> books, SearchQuery query) {
+  final active = activeSearchFilters(query);
+  if (active.isEmpty) return ClientFilterOutcome(books, const {}, const {});
+
+  final server = serverSideFilters(id, query);
+  final ignored = <SearchFilter>{};
+  final clientSide = <SearchFilter>{};
+  var result = books;
+
+  // Keeps books matching [test]; a null test result means "no data".
+  // Server-applied filters are re-checked too, as a guard.
+  void filterBy(SearchFilter filter, bool? Function(BookData) test) {
+    if (!active.contains(filter)) return;
+    final onServer = server.contains(filter);
+    final verdicts = [for (final book in result) test(book)];
+    if (verdicts.every((v) => v == null)) {
+      // Nothing to check against: trust the server if it applied it.
+      if (!onServer) ignored.add(filter);
+      return;
+    }
+    if (!onServer) clientSide.add(filter);
+    result = [
+      for (var i = 0; i < result.length; i++)
+        if (verdicts[i] == true) result[i],
+    ];
+  }
+
+  // Language is checked on every source, as before: once any row names
+  // its language, rows that do not match (or name none) are dropped.
+  final language = bookLanguageName(query.language);
+  if (language == null) {
+    if (active.contains(SearchFilter.language) &&
+        !server.contains(SearchFilter.language)) {
+      ignored.add(SearchFilter.language);
+    }
+  } else {
+    filterBy(SearchFilter.language, (book) {
+      final bookLanguage = bookLanguageName(book.info);
+      return bookLanguage == null ? null : bookLanguage == language;
+    });
+  }
+
+  final checkOnClient = id != SearchProviderId.annasArchive;
+
+  if (checkOnClient) {
+    final wanted = query.fileTypes.toSet();
+    filterBy(SearchFilter.fileType, (book) {
+      final tokens = _infoTokens(book.info);
+      final formats = tokens.where(_knownFormats.contains);
+      if (formats.isEmpty) return null;
+      return formats.any(wanted.contains);
+    });
+
+    final range = _YearRange.parse(query.year);
+    if (active.contains(SearchFilter.year) && range == null) {
+      if (!server.contains(SearchFilter.year)) ignored.add(SearchFilter.year);
+    } else if (range != null) {
+      filterBy(SearchFilter.year, (book) {
+        final year = infoYear(book.info);
+        return year == null ? null : range.contains(year);
+      });
+    }
+
+    if (active.contains(SearchFilter.sort)) {
+      final sorted = _sortBooks(result, query.sort);
+      if (sorted == null) {
+        ignored.add(SearchFilter.sort);
+      } else {
+        clientSide.add(SearchFilter.sort);
+        result = sorted;
+      }
+    }
+  }
+
+  for (final filter in const [
+    SearchFilter.type,
+    SearchFilter.author,
+    SearchFilter.publisher,
+  ]) {
+    if (active.contains(filter) && !server.contains(filter)) {
+      ignored.add(filter);
+    }
+  }
+
+  return ClientFilterOutcome(result, ignored, clientSide);
+}
+
+const _knownFormats = {
+  'pdf', 'epub', 'mobi', 'azw', 'azw3', 'fb2', 'djvu', 'cbr', 'cbz', //
+  'txt', 'rtf', 'doc', 'docx', 'lit', 'chm', 'zip', 'rar',
+};
+
+List<String> _infoTokens(String? info) => (info ?? '')
+    .split(',')
+    .map((token) => token.trim().toLowerCase())
+    .where((token) => token.isNotEmpty)
+    .toList();
+
+/// The publication year in a result's `info`, if one of its
+/// comma-separated parts is a plain four-digit year.
+int? infoYear(String? info) {
+  for (final token in _infoTokens(info)) {
+    if (RegExp(r'^\d{4}$').hasMatch(token)) {
+      final year = int.parse(token);
+      if (year >= 1000 && year <= 2999) return year;
+    }
+  }
+  return null;
+}
+
+/// The file size in bytes in a result's `info` ("2.1MB", "707 kB").
+double? infoSizeBytes(String? info) {
+  const units = {'b': 1, 'k': 1024, 'm': 1024 * 1024, 'g': 1024 * 1024 * 1024};
+  for (final token in _infoTokens(info)) {
+    final match =
+        RegExp(r'^(\d+(?:[.,]\d+)?)\s*([kmg]?)i?b$').firstMatch(token);
+    if (match == null) continue;
+    final value = double.tryParse(match.group(1)!.replaceAll(',', '.'));
+    if (value == null) continue;
+    final unit = match.group(2)!.isEmpty ? 'b' : match.group(2)!;
+    return value * units[unit]!;
+  }
+  return null;
+}
+
+/// Year filter values from the search page: "2024", "2010-2014",
+/// "Before 1980".
+@immutable
+class _YearRange {
+  final int from;
+  final int to;
+
+  const _YearRange(this.from, this.to);
+
+  bool contains(int year) => year >= from && year <= to;
+
+  static _YearRange? parse(String value) {
+    final text = value.trim();
+    if (text.isEmpty) return null;
+    final single = RegExp(r'^(\d{4})$').firstMatch(text);
+    if (single != null) {
+      final year = int.parse(single.group(1)!);
+      return _YearRange(year, year);
+    }
+    final range = RegExp(r'^(\d{4})\s*-\s*(\d{4})$').firstMatch(text);
+    if (range != null) {
+      return _YearRange(int.parse(range.group(1)!), int.parse(range.group(2)!));
+    }
+    final before =
+        RegExp(r'^before\s+(\d{4})$', caseSensitive: false).firstMatch(text);
+    if (before != null) return _YearRange(0, int.parse(before.group(1)!) - 1);
+    return null;
+  }
+}
+
+/// Stable sort for the search page's sort values. Rows without the key
+/// keep their relative order after the rows that have it. Null when the
+/// sort value is unknown or no row carries the data it needs.
+List<BookData>? _sortBooks(List<BookData> books, String sort) {
+  final num? Function(BookData) key;
+  final bool descending;
+  switch (sort) {
+    case 'newest':
+      key = (book) => infoYear(book.info);
+      descending = true;
+    case 'oldest':
+      key = (book) => infoYear(book.info);
+      descending = false;
+    case 'largest':
+      key = (book) => infoSizeBytes(book.info);
+      descending = true;
+    case 'smallest':
+      key = (book) => infoSizeBytes(book.info);
+      descending = false;
+    default:
+      return null;
+  }
+  final keyed = [
+    for (var i = 0; i < books.length; i++) (index: i, key: key(books[i])),
+  ];
+  if (keyed.every((entry) => entry.key == null)) return null;
+  keyed.sort((a, b) {
+    final ak = a.key;
+    final bk = b.key;
+    if (ak == null && bk == null) return a.index.compareTo(b.index);
+    if (ak == null) return 1;
+    if (bk == null) return -1;
+    final compared = descending ? bk.compareTo(ak) : ak.compareTo(bk);
+    return compared != 0 ? compared : a.index.compareTo(b.index);
+  });
+  return [for (final entry in keyed) books[entry.index]];
 }
 
 /// Fan-out search across the enabled providers, merging and de-duplicating
@@ -1502,9 +1783,14 @@ class SearchManager {
       'query': query.text,
       'providers': [for (final p in active) p.displayName],
     });
+    // A source whose results are all removed by the client-side filters
+    // counts as "found nothing": the chain moves on to the next source
+    // instead of dead-ending on an empty page.
     final books = <BookData>[];
     final failed = <String>[];
     String resultSource = '';
+    Set<SearchFilter> ignored = const {};
+    Set<SearchFilter> clientSide = const {};
     for (final provider in active) {
       logger.debug('Trying ${provider.displayName}', tag: 'SearchManager');
       final outcome = await _searchOne(provider, query, logger);
@@ -1514,7 +1800,11 @@ class SearchManager {
         failed.add(provider.displayName);
       } else {
         books.addAll(outcome.books);
-        if (books.isNotEmpty) resultSource = provider.displayName;
+        if (books.isNotEmpty) {
+          resultSource = provider.displayName;
+          ignored = outcome.ignored;
+          clientSide = outcome.clientSide;
+        }
       }
       if (books.isNotEmpty) break;
     }
@@ -1523,11 +1813,14 @@ class SearchManager {
       'results': books.length,
       'failed': failed,
       'source': resultSource,
+      if (ignored.isNotEmpty) 'ignoredFilters': [for (final f in ignored) f.name],
     });
     return SearchManagerResult(
         books: _dedupe(books),
         failedProviders: failed,
-        resultSource: resultSource);
+        resultSource: resultSource,
+        ignoredFilters: ignored,
+        clientSideFilters: clientSide);
   }
 
   Future<_Outcome> _searchOne(
@@ -1536,16 +1829,25 @@ class SearchManager {
       final books = await provider.search(query);
       logger.info('${provider.displayName} returned ${books.length} books',
           tag: 'SearchManager');
+      final filtered = applyClientFilters(provider.id, books, query);
+      if (filtered.books.length != books.length ||
+          filtered.ignored.isNotEmpty) {
+        logger.info(
+            '${provider.displayName}: ${filtered.books.length} of '
+            '${books.length} books match the filters',
+            tag: 'SearchManager',
+            metadata: {
+              'clientSide': [for (final f in filtered.clientSide) f.name],
+              'ignored': [for (final f in filtered.ignored) f.name],
+            });
+      }
       // Stamp every result with its catalog so the UI can show where
       // each book came from.
-      final language =
-          query.filtersEnabled ? bookLanguageName(query.language) : null;
-      final tagged = books
-          .where((book) =>
-              language == null || bookLanguageName(book.info) == language)
+      final tagged = filtered.books
           .map((b) => b.copyWith(source: provider.displayName))
           .toList();
-      return _Outcome(provider, tagged, null);
+      return _Outcome(
+          provider, tagged, null, filtered.ignored, filtered.clientSide);
     } catch (e) {
       logger.warning('${provider.displayName} search failed',
           tag: 'SearchManager', error: e);
@@ -1567,6 +1869,9 @@ class _Outcome {
   final SearchProvider provider;
   final List<BookData> books;
   final Object? error;
+  final Set<SearchFilter> ignored;
+  final Set<SearchFilter> clientSide;
 
-  const _Outcome(this.provider, this.books, this.error);
+  const _Outcome(this.provider, this.books, this.error,
+      [this.ignored = const {}, this.clientSide = const {}]);
 }

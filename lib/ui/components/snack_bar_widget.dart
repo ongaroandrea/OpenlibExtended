@@ -1,18 +1,21 @@
 // Flutter imports:
 import 'package:flutter/material.dart';
 
+// Project imports:
+import 'package:openlib/features/eink/eink.dart' show EinkColorX;
+
 void showSnackBar({required BuildContext context, required String message}) {
   final messenger = ScaffoldMessenger.of(context);
   messenger.clearSnackBars();
   messenger.showSnackBar(SnackBar(
     showCloseIcon: true,
-    closeIconColor: Colors.white,
+    closeIconColor: Colors.white.einkBg(context),
     content: Text(
       message,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 11,
         fontWeight: FontWeight.bold,
-        color: Colors.white,
+        color: Colors.white.einkBg(context),
       ),
       textAlign: TextAlign.center,
     ),

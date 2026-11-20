@@ -4,6 +4,16 @@ import 'dart:io';
 // Flutter imports:
 import 'package:flutter/material.dart';
 import 'package:openlib/l10n/app_localizations.dart';
+import 'package:openlib/features/eink/eink.dart'
+    show
+        BusyIndicator,
+        PageTapZones,
+        PageTurn,
+        PageTurnKeys,
+        einkModeProvider,
+        findVerticalScrollPosition,
+        scrollByPage,
+        volumeKeyPagingProvider;
 
 // Package imports:
 import 'package:epub_view/epub_view.dart';
@@ -82,7 +92,7 @@ class _EpubViewState extends ConsumerState<EpubViewerWidget> {
       error: (error, stack) {
         return Scaffold(
           appBar: AppBar(
-            backgroundColor: Theme.of(context).colorScheme.primary,
+            backgroundColor: Theme.of(context).colorScheme.surface,
             title: Text(AppLocalizations.of(context).appTitle),
             titleTextStyle: Theme.of(context).textTheme.displayLarge,
           ),
@@ -92,7 +102,7 @@ class _EpubViewState extends ConsumerState<EpubViewerWidget> {
       loading: () {
         return Scaffold(
           appBar: AppBar(
-            backgroundColor: Theme.of(context).colorScheme.primary,
+            backgroundColor: Theme.of(context).colorScheme.surface,
             title: Text(AppLocalizations.of(context).appTitle),
             titleTextStyle: Theme.of(context).textTheme.displayLarge,
           ),
@@ -100,7 +110,7 @@ class _EpubViewState extends ConsumerState<EpubViewerWidget> {
             child: SizedBox(
               width: 25,
               height: 25,
-              child: CircularProgressIndicator(
+              child: BusyIndicator(
                 color: Theme.of(context).colorScheme.secondary,
               ),
             ),
@@ -125,6 +135,9 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
   late EpubController _epubReaderController;
   bool _showTutorial = false;
   final FocusNode _focusNode = FocusNode();
+  // Marks the book's subtree so a page turn can find epub_view's
+  // (private) scroll position under it.
+  final GlobalKey _bookKey = GlobalKey();
 
   static const _defaultFontSize = 16.0;
   static const _minFontSize = 10.0;
@@ -309,6 +322,19 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
     return '2x';
   }
 
+  /// Turns a "page" in the continuous scroll: one screen minus a small
+  /// overlap. Jumps instead of animating in E-ink mode or with system
+  /// animations off.
+  void _turnPage(PageTurn turn) {
+    final bookContext = _bookKey.currentContext;
+    if (bookContext == null) return;
+    final position = findVerticalScrollPosition(bookContext);
+    if (position == null) return;
+    final animate = !MediaQuery.disableAnimationsOf(context) &&
+        !ref.read(einkModeProvider);
+    scrollByPage(position, turn, animate: animate);
+  }
+
   Future<void> _checkTutorial() async {
     try {
       final prefs = MyLibraryDb.instance;
@@ -347,13 +373,13 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
     // Watch for saved position
     final positionAsync = ref.watch(getBookPosition(widget.fileName));
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final volumeKeys = ref.watch(volumeKeyPagingProvider);
 
     return Scaffold(
       appBar: AppBar(
-        // Use surface color in dark mode so it's not white
-        backgroundColor: isDarkMode
-            ? Theme.of(context).colorScheme.surface
-            : Theme.of(context).colorScheme.primary,
+        // Surface, not primary: light primary is white (same look today)
+        // but is black in E-ink mode, which would hide the black title.
+        backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(AppLocalizations.of(context).appTitle),
         titleTextStyle: Theme.of(context).textTheme.displayLarge,
         leading: IconButton(
@@ -426,16 +452,22 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
       endDrawer: Drawer(
         child: EpubViewTableOfContents(controller: _epubReaderController),
       ),
-      // Use standard EpubView without interfering gestures first to ensure it works
       body: Stack(
         children: [
-          // SelectionArea lets readers select and copy text from the book.
-          // Buttons and links inside the Html still work: SelectionArea only
-          // captures drags that start on text.
-          SelectionArea(
-            child: Focus(
-              focusNode: _focusNode,
-              autofocus: true,
+          // Page keys (PageUp/PageDown, arrows, Space, volume keys when
+          // enabled) and the left/right edge tap zones turn a page. The
+          // middle of the page keeps its normal gestures.
+          PageTurnKeys(
+            focusNode: _focusNode,
+            volumeKeys: volumeKeys,
+            onTurn: _turnPage,
+            child: PageTapZones(
+              onTurn: _turnPage,
+              // SelectionArea lets readers select and copy text from the
+              // book. Buttons and links inside the Html still work:
+              // SelectionArea only captures drags that start on text.
+              child: SelectionArea(
+              key: _bookKey,
               child: positionAsync.when(
                 data: (savedCfi) {
                   return EpubView(
@@ -476,7 +508,7 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
                   );
                 },
                 loading: () => Center(
-                  child: CircularProgressIndicator(
+                  child: BusyIndicator(
                     color: Theme.of(context).colorScheme.secondary,
                   ),
                 ),
@@ -484,10 +516,11 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
                     Center(child: Text("Error loading book: $err")),
               ),
             ),
+            ),
           ),
           if (_showTutorial)
             ReaderHelpOverlay(
-              isDesktop: PlatformUtils.isDesktop,
+              volumeKeys: volumeKeys && PlatformUtils.isAndroid,
               onDismiss: () => setState(() => _showTutorial = false),
             ),
         ],

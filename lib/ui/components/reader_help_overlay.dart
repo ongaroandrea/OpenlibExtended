@@ -1,18 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:openlib/l10n/app_localizations.dart';
 
+/// First-run help for the EPUB reader. Lists only controls that exist:
+/// edge tap zones, page keys, volume keys (when [volumeKeys] is on), the
+/// text size buttons and the table of contents drawer.
 class ReaderHelpOverlay extends StatelessWidget {
   final VoidCallback onDismiss;
-  final bool isDesktop;
+
+  /// Whether the volume keys turn pages right now (Android, setting on).
+  final bool volumeKeys;
 
   const ReaderHelpOverlay({
     super.key,
     required this.onDismiss,
-    required this.isDesktop,
+    this.volumeKeys = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Material(
       color: Colors.black.withValues(alpha: 0.85),
       child: InkWell(
@@ -20,24 +26,19 @@ class ReaderHelpOverlay extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // Close hint
-            Positioned(
-              top: 40,
-              right: 20,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white, size: 30),
-                onPressed: onDismiss,
-              ),
-            ),
-
-            // Content
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+            // Content: centred, scrolls on short screens. Only positioned
+            // children, so the overlay covers the whole reader.
+            Positioned.fill(
+              child: Center(
+              child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 16),
+              child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(Icons.menu_book, color: Colors.white, size: 60),
                 const SizedBox(height: 20),
                 Text(
-                  "Reader Controls",
+                  l10n.readerHelpTitle,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -53,27 +54,34 @@ class ReaderHelpOverlay extends StatelessWidget {
                   children: [
                     _buildHelpItem(
                       context,
-                      icon: isDesktop ? Icons.keyboard : Icons.touch_app,
-                      title: isDesktop ? "Arrow Keys" : "Tap Sides",
-                      subtitle: isDesktop
-                          ? "Use Left/Right arrows to turn pages"
-                          : "Tap left/right edges to turn pages",
+                      icon: Icons.touch_app,
+                      title: l10n.readerHelpTapTitle,
+                      subtitle: l10n.readerHelpTapBody,
                     ),
                     _buildHelpItem(
                       context,
-                      icon: Icons.zoom_in,
-                      title: "Zoom",
-                      subtitle: isDesktop
-                          ? "Use provided controls"
-                          : "Pinch to zoom (PDF)",
+                      icon: Icons.keyboard,
+                      title: l10n.readerHelpKeysTitle,
+                      subtitle: l10n.readerHelpKeysBody,
+                    ),
+                    if (volumeKeys)
+                      _buildHelpItem(
+                        context,
+                        icon: Icons.volume_up,
+                        title: l10n.readerHelpVolumeTitle,
+                        subtitle: l10n.readerHelpVolumeBody,
+                      ),
+                    _buildHelpItem(
+                      context,
+                      icon: Icons.format_size,
+                      title: l10n.readerHelpTextSizeTitle,
+                      subtitle: l10n.readerHelpTextSizeBody,
                     ),
                     _buildHelpItem(
                       context,
                       icon: Icons.list,
-                      title: "Menu",
-                      subtitle: isDesktop
-                          ? "Table of Contents via sidebar"
-                          : "Tap center or swipe for menu",
+                      title: l10n.readerHelpContentsTitle,
+                      subtitle: l10n.readerHelpContentsBody,
                     ),
                   ],
                 ),
@@ -87,9 +95,22 @@ class ReaderHelpOverlay extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 40, vertical: 15),
                   ),
-                  child: Text(AppLocalizations.of(context).gotIt),
+                  child: Text(l10n.gotIt),
                 ),
               ],
+            ),
+            ),
+              ),
+            ),
+
+            // Close hint (last, so it stays on top of the content)
+            Positioned(
+              top: 40,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: onDismiss,
+              ),
             ),
           ],
         ),

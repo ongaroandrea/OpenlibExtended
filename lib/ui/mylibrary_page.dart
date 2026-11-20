@@ -1,6 +1,7 @@
 // Flutter imports:
 import 'package:flutter/material.dart';
 import 'package:openlib/l10n/app_localizations.dart';
+import 'package:openlib/features/eink/eink.dart' show BusyIndicator;
 
 // Package imports:
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,7 +30,6 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
   bool _isRefreshing = false;
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
-  bool _hasTriggeredRefresh = false;
 
   static const _sortPrefKey = 'librarySortMode';
 
@@ -37,10 +37,9 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
   void initState() {
     super.initState();
     _restoreSortMode();
-    // On desktop, listen for scroll to bottom to trigger refresh
-    if (PlatformUtils.isDesktop) {
-      _scrollController.addListener(_onScroll);
-    }
+    // The library syncs with the folder only when asked: pull down to
+    // refresh, or the refresh button on desktop. (Scrolling to the end no
+    // longer triggers it.)
   }
 
   /// Loads the persisted sort mode; unknown values fall back to the default.
@@ -66,19 +65,6 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
-  }
-
-  void _onScroll() {
-    // Trigger refresh when scrolled to bottom on desktop
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 50) {
-      if (!_hasTriggeredRefresh && !_isRefreshing) {
-        _hasTriggeredRefresh = true;
-        _refreshLibrary();
-      }
-    } else {
-      _hasTriggeredRefresh = false;
-    }
   }
 
   Future<void> _refreshLibrary() async {
@@ -151,7 +137,7 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
                       ? SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(
+                          child: BusyIndicator(
                             strokeWidth: 2,
                             color: Theme.of(context).colorScheme.secondary,
                           ),
@@ -346,7 +332,7 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
                                   ? SizedBox(
                                       width: 20,
                                       height: 20,
-                                      child: CircularProgressIndicator(
+                                      child: BusyIndicator(
                                         strokeWidth: 2,
                                         color: Theme.of(context)
                                             .colorScheme
@@ -394,7 +380,7 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
                                     ? SizedBox(
                                         width: 20,
                                         height: 20,
-                                        child: CircularProgressIndicator(
+                                        child: BusyIndicator(
                                           strokeWidth: 2,
                                           color: Theme.of(context)
                                               .colorScheme
@@ -446,7 +432,7 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
                 child: SizedBox(
               width: 25,
               height: 25,
-              child: CircularProgressIndicator(
+              child: BusyIndicator(
                 color: Theme.of(context).colorScheme.secondary,
               ),
             ));

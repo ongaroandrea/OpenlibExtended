@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openlib/main.dart' show MainScreen;
 import 'package:openlib/services/database.dart';
 import 'package:openlib/services/files.dart';
+import 'package:openlib/ui/components/folder_access_dialog.dart';
 import 'package:openlib/state/state.dart';
 import 'package:openlib/ui/settings_page.dart' show scanAndImportBooks;
 import 'package:permission_handler/permission_handler.dart';
@@ -118,16 +119,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   Future<void> _selectStorage() async {
     String? pickedDirectory = await pickBookStorageDirectory();
     if (pickedDirectory != null) {
-      // If we are selecting a new path, we should probably check permissions if android
-      if (Platform.isAndroid) {
-        var status = await Permission.storage.status;
-        if (!status.isGranted) {
-          await Permission.storage.request();
-        }
-        if (await Permission.manageExternalStorage.status.isDenied) {
-          await Permission.manageExternalStorage.request();
-        }
-      }
+      // Ask for storage access only if this folder needs it; if the user
+      // says no, keep the default folder.
+      if (!mounted) return;
+      if (!await ensureBookFolderAccess(context, pickedDirectory)) return;
 
       setState(() {
         _storagePath = pickedDirectory;

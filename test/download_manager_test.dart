@@ -16,6 +16,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 // Project imports:
 import 'package:openlib/services/database.dart';
+import 'package:openlib/features/eink/progress_throttle.dart' show EinkProgress;
 import 'package:openlib/services/download_manager.dart';
 import 'package:openlib/services/files.dart' show generateBookFileName;
 
@@ -146,6 +147,11 @@ class _FakePathProvider extends PathProviderPlatform {
 }
 
 void main() {
+  // These tests react to individual network chunks (pause at 40-90%),
+  // so they need every progress update, not the throttled UI cadence.
+  setUpAll(() => EinkProgress.throttle = false);
+  tearDownAll(() => EinkProgress.throttle = true);
+
   setUpAll(() {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;

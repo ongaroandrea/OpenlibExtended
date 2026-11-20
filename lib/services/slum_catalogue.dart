@@ -95,6 +95,16 @@ class SlumCatalogue {
   bool get lastFetchSucceeded => _lastFetchSucceeded;
   bool _lastFetchSucceeded = true;
 
+  /// True when the most recent fetch got at least one service page from
+  /// open-slum.org itself. Unlike [lastFetchSucceeded], a fetch that only
+  /// carried the cached list over (offline) does not count, so callers
+  /// that throttle refreshes record a success only when SLUM answered.
+  bool get lastFetchReachedSlum => _lastFetchReachedSlum;
+  bool _lastFetchReachedSlum = false;
+
+  /// Whether any mirror is known (fetched or restored), without fetching.
+  bool get hasCachedSites => _cache.values.any((sites) => sites.isNotEmpty);
+
   /// How long to wait before trying SLUM again after a fetch yielded
   /// nothing. Long enough that an outage does not turn every provider
   /// call into four requests, short enough that the user does not stare
@@ -153,6 +163,7 @@ class SlumCatalogue {
     _cache = merged;
     final gotAnything = merged.values.any((sites) => sites.isNotEmpty);
     _lastFetchSucceeded = gotAnything;
+    _lastFetchReachedSlum = results.any((sites) => sites.isNotEmpty);
     _fetchedAt = gotAnything ? DateTime.now() : null;
     await _persist(merged);
     return _cache;

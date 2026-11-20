@@ -171,7 +171,10 @@ class ArchiveParsing {
     url += '&display=';
     url += '&q=$encodedQuery';
     if (content.isNotEmpty) url += '&content=$content';
-    if (fileType.isNotEmpty) url += '&ext=$fileType';
+    // One ext= per format; a comma list ("Supported formats") repeats it.
+    for (final ext in fileType.split(',')) {
+      if (ext.trim().isNotEmpty) url += '&ext=${ext.trim()}';
+    }
     if (year.isNotEmpty) {
       if (year == 'Before 1980') {
         url += '&year_end=1979';
@@ -257,8 +260,14 @@ class ArchiveParsing {
 
       final info = visibleText(container.querySelector('div.text-gray-800'));
 
-      final matchesType = fileType.isEmpty ||
-          info.toLowerCase().contains(fileType.toLowerCase());
+      // fileType may list several formats, comma-separated.
+      final wantedTypes = fileType
+          .split(',')
+          .map((t) => t.trim().toLowerCase())
+          .where((t) => t.isNotEmpty);
+      final lowerInfo = info.toLowerCase();
+      final matchesType =
+          wantedTypes.isEmpty || wantedTypes.any(lowerInfo.contains);
       if (!matchesType) continue;
 
       books.add(ArchiveBook(

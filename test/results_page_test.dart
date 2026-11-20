@@ -120,8 +120,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Anna PIHKAL'), findsOneWidget);
     expect(find.text('Z-Library PIHKAL'), findsNothing);
-    expect(requests.last.source, SearchProviderId.annasArchive);
-    expect(requests.last.page, 1);
+    // A one-book page cannot scroll, so the pager may also probe page 2;
+    // the newest page-1 request must be for the chosen source.
+    expect(requests.lastWhere((k) => k.page == 1).source,
+        SearchProviderId.annasArchive);
   });
 
   test('page cache separates sources for the same query', () {

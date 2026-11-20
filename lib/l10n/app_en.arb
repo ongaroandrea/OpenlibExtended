@@ -289,6 +289,26 @@
   "@preview": {
     "description": "Font scale preview label"
   },
+  "folderAccessTitle": "Allow access to this folder?",
+  "@folderAccessTitle": {
+    "description": "Dialog title before asking Android for All files access for a custom book folder"
+  },
+  "folderAccessBody": "Android only lets apps save files in this folder with \"All files access\". OpenlibExtended uses it only to save, move and find books in the folder you chose.\n\nYou don't need it if you keep the current folder. Books still open in other reader apps.",
+  "@folderAccessBody": {
+    "description": "Explains why All files access is needed for the chosen folder and that it is optional"
+  },
+  "folderAccessAllow": "Allow",
+  "@folderAccessAllow": {
+    "description": "Button: go on and request the storage permission"
+  },
+  "folderAccessKeep": "Keep current folder",
+  "@folderAccessKeep": {
+    "description": "Button: cancel and keep using the current book folder"
+  },
+  "folderAccessKeptCurrent": "No access to that folder. Books stay in the current folder.",
+  "@folderAccessKeptCurrent": {
+    "description": "Snackbar when the chosen folder cannot be used"
+  },
   "storageLocation": "Storage Location",
   "@storageLocation": {
     "description": "Settings tile title"
@@ -312,6 +332,14 @@
   "manualDownloadButton": "Manual Download Button",
   "@manualDownloadButton": {
     "description": "Settings switch tile title"
+  },
+  "einkMode": "E-ink mode",
+  "@einkMode": {
+    "description": "Settings toggle for e-paper displays"
+  },
+  "einkModeHint": "For e-paper screens: no animations, ripples or spinners, scrolling stops with your finger, fewer progress updates",
+  "@einkModeHint": {
+    "description": "Subtitle of the E-ink mode settings toggle"
   },
   "backgroundVerification": "Verify challenges in background",
   "@backgroundVerification": {
@@ -614,10 +642,6 @@
   "@unableToOpenFile": {
     "description": "Snackbar when opening a file fails"
   },
-  "openInSite": "Open in site",
-  "@openInSite": {
-    "description": "Button opening the book page on the source site"
-  },
   "bookDeleted": "Book has been Deleted!",
   "@bookDeleted": {
     "description": "Snackbar after deleting a book"
@@ -686,10 +710,6 @@
   "@genres": {
     "description": "Home page header for the genres tab"
   },
-  "copiedBookPath": "Copied the book path to your clipboard",
-  "@copiedBookPath": {
-    "description": "Snackbar after copying a book's file path"
-  },
   "pauseDownload": "Pause download",
   "@pauseDownload": {
     "description": "Tooltip on the pause button"
@@ -701,10 +721,6 @@
   "cancelDownload": "Cancel download",
   "@cancelDownload": {
     "description": "Tooltip on the cancel button"
-  },
-  "copiedBookLink": "Copied the book link to your clipboard",
-  "@copiedBookLink": {
-    "description": "Snackbar after copying a book link"
   },
   "noMirrors": "No mirrors available!",
   "@noMirrors": {
@@ -989,5 +1005,387 @@
   "whatsNewFeatureCovers": "Missing LibGen covers are fetched from the book's detail page.",
   "@whatsNewFeatureCovers": {
     "description": "Release note about the lazy cover fix"
+  },
+  "volumeKeysTurnPages": "Volume keys turn pages",
+  "@volumeKeysTurnPages": {
+    "description": "Settings switch: hardware volume keys turn pages in the built-in readers"
+  },
+  "volumeKeysTurnPagesHint": "In the built-in readers, volume down goes to the next page and volume up to the previous one. On by default in E-ink mode",
+  "@volumeKeysTurnPagesHint": {
+    "description": "Subtitle of the volume keys switch"
+  },
+  "loadMoreResults": "Load more",
+  "@loadMoreResults": {
+    "description": "E-ink mode: button at the end of search results that loads the next page"
+  },
+  "readerHelpTitle": "Reader controls",
+  "@readerHelpTitle": {
+    "description": "Title of the reader help overlay"
+  },
+  "readerHelpTapTitle": "Tap the edges",
+  "@readerHelpTapTitle": {
+    "description": "Reader help: tap zones heading"
+  },
+  "readerHelpTapBody": "Tap the right edge for the next page, the left edge for the previous one",
+  "@readerHelpTapBody": {
+    "description": "Reader help: tap zones description"
+  },
+  "readerHelpKeysTitle": "Page keys",
+  "@readerHelpKeysTitle": {
+    "description": "Reader help: keyboard / page-turner keys heading"
+  },
+  "readerHelpKeysBody": "Page Down, Right, Down or Space: next page. Page Up, Left, Up or Shift+Space: previous page",
+  "@readerHelpKeysBody": {
+    "description": "Reader help: which keys turn pages"
+  },
+  "readerHelpVolumeTitle": "Volume keys",
+  "@readerHelpVolumeTitle": {
+    "description": "Reader help: volume keys heading"
+  },
+  "readerHelpVolumeBody": "Volume down: next page. Volume up: previous page",
+  "@readerHelpVolumeBody": {
+    "description": "Reader help: volume keys description"
+  },
+  "readerHelpTextSizeTitle": "Text size",
+  "@readerHelpTextSizeTitle": {
+    "description": "Reader help: font size heading"
+  },
+  "readerHelpTextSizeBody": "Use the smaller and larger text buttons in the top bar",
+  "@readerHelpTextSizeBody": {
+    "description": "Reader help: font size description"
+  },
+  "readerHelpContentsTitle": "Contents",
+  "@readerHelpContentsTitle": {
+    "description": "Reader help: table of contents heading"
+  },
+  "readerHelpContentsBody": "Swipe in from the right edge for the table of contents",
+  "@readerHelpContentsBody": {
+    "description": "Reader help: how to open the table of contents"
+  },
+  "searchFieldHint": "Search",
+  "@searchFieldHint": {
+    "description": "Search page: placeholder in the main search field"
+  },
+  "searchSubmitTooltip": "Search",
+  "@searchSubmitTooltip": {
+    "description": "Search page: tooltip and screen-reader label of the submit button"
+  },
+  "searchClear": "Clear search",
+  "@searchClear": {
+    "description": "Search page: tooltip of the button that clears the search field"
+  },
+  "searchFieldEmpty": "Search field is empty",
+  "@searchFieldEmpty": {
+    "description": "Search page: snackbar when submitting an empty query"
+  },
+  "searchFilterType": "Type",
+  "@searchFilterType": {
+    "description": "Search filter label: content type"
+  },
+  "searchFilterSort": "Sort by",
+  "@searchFilterSort": {
+    "description": "Search filter label: sort order"
+  },
+  "searchFilterFileType": "File type",
+  "@searchFilterFileType": {
+    "description": "Search filter label: file format"
+  },
+  "searchFilterLanguage": "Language",
+  "@searchFilterLanguage": {
+    "description": "Search filter label: book language"
+  },
+  "searchFilterYear": "Year published",
+  "@searchFilterYear": {
+    "description": "Search filter label: publication year"
+  },
+  "searchFileTypeSupported": "Supported formats",
+  "@searchFileTypeSupported": {
+    "description": "File type option: only formats the app can open (EPUB, PDF, CBR, CBZ). The default."
+  },
+  "searchFilterAll": "All",
+  "@searchFilterAll": {
+    "description": "Search filter option: no filtering"
+  },
+  "searchTypeAnyBooks": "Any books",
+  "@searchTypeAnyBooks": {
+    "description": "Search type filter option"
+  },
+  "searchTypeUnknownBooks": "Unknown books",
+  "@searchTypeUnknownBooks": {
+    "description": "Search type filter option"
+  },
+  "searchTypeFiction": "Fiction books",
+  "@searchTypeFiction": {
+    "description": "Search type filter option"
+  },
+  "searchTypeNonFiction": "Non-fiction books",
+  "@searchTypeNonFiction": {
+    "description": "Search type filter option"
+  },
+  "searchTypeComic": "Comic books",
+  "@searchTypeComic": {
+    "description": "Search type filter option"
+  },
+  "searchTypeMagazine": "Magazine",
+  "@searchTypeMagazine": {
+    "description": "Search type filter option"
+  },
+  "searchTypeStandardsDocument": "Standards document",
+  "@searchTypeStandardsDocument": {
+    "description": "Search type filter option"
+  },
+  "searchTypeJournalArticle": "Journal article",
+  "@searchTypeJournalArticle": {
+    "description": "Search type filter option"
+  },
+  "searchSortMostRelevant": "Most relevant",
+  "@searchSortMostRelevant": {
+    "description": "Search sort option"
+  },
+  "searchSortNewest": "Newest",
+  "@searchSortNewest": {
+    "description": "Search sort option"
+  },
+  "searchSortOldest": "Oldest",
+  "@searchSortOldest": {
+    "description": "Search sort option"
+  },
+  "searchSortLargest": "Largest",
+  "@searchSortLargest": {
+    "description": "Search sort option"
+  },
+  "searchSortSmallest": "Smallest",
+  "@searchSortSmallest": {
+    "description": "Search sort option"
+  },
+  "searchYearBefore1980": "Before 1980",
+  "@searchYearBefore1980": {
+    "description": "Search year filter option"
+  },
+  "cardTitleByAuthor": "{title}, by {author}",
+  "@cardTitleByAuthor": {
+    "description": "Screen-reader label start for a search result card: book title and author",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "author": {
+        "type": "String"
+      }
+    }
+  },
+  "cardSource": "Source: {source}",
+  "@cardSource": {
+    "description": "Screen-reader label for the catalog a search result came from",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "cardDownloadedBadge": "Already downloaded",
+  "@cardDownloadedBadge": {
+    "description": "Screen-reader label of the check badge on a result the user already downloaded"
+  },
+  "errorWhatToDo": "What to do",
+  "@errorWhatToDo": {
+    "description": "Heading of the advice box on the error screen"
+  },
+  "errorVpnHint": "A VPN can help get around regional blocks.",
+  "@errorVpnHint": {
+    "description": "Body of the VPN tip on the error screen"
+  },
+  "errorVerifyIntro": "The site wants to check that you're human. We'll open a browser window where you can complete the check.",
+  "@errorVerifyIntro": {
+    "description": "Manual verification dialog body"
+  },
+  "errorVerifyReturnHint": "When you're done, come back to the app and tap Try Again.",
+  "@errorVerifyReturnHint": {
+    "description": "Hint in the manual verification dialog"
+  },
+  "errorNoContent": "No content available",
+  "@errorNoContent": {
+    "description": "Placeholder when a blocked page has no captured content"
+  },
+  "errorTruncated": "… (truncated, {count} characters in total)",
+  "@errorTruncated": {
+    "description": "Note appended to a truncated blocked-page dump",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "errorNoInternetTitle": "You're offline",
+  "@errorNoInternetTitle": {
+    "description": "Error title: the device is offline"
+  },
+  "errorNoInternetBody": "Check that Wi-Fi or mobile data is on and airplane mode is off, then try again.",
+  "@errorNoInternetBody": {
+    "description": "Error advice: the device is offline"
+  },
+  "errorTimeoutTitle": "The source took too long to respond",
+  "@errorTimeoutTitle": {
+    "description": "Error title: request timed out"
+  },
+  "errorTimeoutBody": "Your connection may be slow, or the site is overloaded. Try again in a moment, or pick another source.",
+  "@errorTimeoutBody": {
+    "description": "Error advice: request timed out"
+  },
+  "errorServerUnavailableTitle": "The source isn't responding",
+  "@errorServerUnavailableTitle": {
+    "description": "Error title: server down"
+  },
+  "errorServerUnavailableBody": "The site may be down for now. Try again in a few minutes, or pick a different mirror in Settings.",
+  "@errorServerUnavailableBody": {
+    "description": "Error advice: server down"
+  },
+  "errorBlockedTitle": "The site wants to check you're human",
+  "@errorBlockedTitle": {
+    "description": "Error title: DDoS-protection challenge"
+  },
+  "errorBlockedBody": "Tap Verify in browser to pass the check, or try again in a few minutes. A different network or a VPN can also help.",
+  "@errorBlockedBody": {
+    "description": "Error advice: DDoS-protection challenge"
+  },
+  "errorForbiddenTitle": "Access denied",
+  "@errorForbiddenTitle": {
+    "description": "Error title: access denied"
+  },
+  "errorForbiddenBody": "The site refused the request. It may be blocked in your region; a VPN or a different mirror in Settings can help.",
+  "@errorForbiddenBody": {
+    "description": "Error advice: access denied"
+  },
+  "errorRateLimitedTitle": "Too many requests",
+  "@errorRateLimitedTitle": {
+    "description": "Error title: rate limited"
+  },
+  "errorRateLimitedBody": "Wait a few minutes, then try again.",
+  "@errorRateLimitedBody": {
+    "description": "Error advice: rate limited"
+  },
+  "errorSslTitle": "Secure connection failed",
+  "@errorSslTitle": {
+    "description": "Error title: TLS handshake failed"
+  },
+  "errorSslBody": "Your network may be blocking secure connections. Try another network or a VPN.",
+  "@errorSslBody": {
+    "description": "Error advice: TLS handshake failed"
+  },
+  "errorDnsTitle": "Can't find the server",
+  "@errorDnsTitle": {
+    "description": "Error title: DNS lookup failed"
+  },
+  "errorDnsBody": "Your network or provider may be blocking the site. Try changing DNS to 1.1.1.1, a VPN, or another network.",
+  "@errorDnsBody": {
+    "description": "Error advice: DNS lookup failed"
+  },
+  "errorUnknownTitle": "Something went wrong",
+  "@errorUnknownTitle": {
+    "description": "Error title: unclassified failure"
+  },
+  "errorUnknownBody": "Try again, or pick another source.",
+  "@errorUnknownBody": {
+    "description": "Error advice: unclassified failure"
+  },
+  "errorSourcesFailedTitle": "No source responded",
+  "@errorSourcesFailedTitle": {
+    "description": "Error title: every search source failed while online"
+  },
+  "errorSourcesFailedBody": "{sources} didn't respond. They may be down or blocked on your network. Try again, or try another network or a VPN.",
+  "@errorSourcesFailedBody": {
+    "description": "Error advice: every search source failed; lists them",
+    "placeholders": {
+      "sources": {
+        "type": "String",
+        "example": "Library Genesis, Z-Library"
+      }
+    }
+  },
+  "resultsSourcesDidNotRespond": "{sources} didn't respond",
+  "@resultsSourcesDidNotRespond": {
+    "description": "Non-blocking notice above results when some sources failed",
+    "placeholders": {
+      "sources": {
+        "type": "String",
+        "example": "Library Genesis, Z-Library"
+      }
+    }
+  },
+  "resultsNoMatchesSourcesDown": "{sources} didn't respond, so not every source was searched.",
+  "@resultsNoMatchesSourcesDown": {
+    "description": "No-results state when some sources failed, so not everything was searched",
+    "placeholders": {
+      "sources": {
+        "type": "String",
+        "example": "Library Genesis, Z-Library"
+      }
+    }
+  },
+  "resultsNoMatchesHint": "Check the spelling, try fewer words, or search another source.",
+  "@resultsNoMatchesHint": {
+    "description": "No-results state hint when every source answered"
+  },
+  "resultsClearFilters": "Clear filters",
+  "@resultsClearFilters": {
+    "description": "Button that resets every active search filter and searches again"
+  },
+  "resultsTryAnotherSource": "Try another source",
+  "@resultsTryAnotherSource": {
+    "description": "Button that opens a menu of other search sources"
+  },
+  "resultsEditSearch": "Edit search",
+  "@resultsEditSearch": {
+    "description": "Button that returns to the search field"
+  },
+  "resultsEndOfList": "{count, plural, =1{End of results · 1 book} other{End of results · {count} books}}",
+  "@resultsEndOfList": {
+    "description": "Marker shown after the last page of results",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resultsActiveFilters": "Active filters",
+  "@resultsActiveFilters": {
+    "description": "Screen-reader label of the active filter chip row"
+  },
+  "resultsFilterChip": "{label}: {value}",
+  "@resultsFilterChip": {
+    "description": "Label of one active filter chip: filter name and value",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "resultsRemoveFilter": "Remove filter",
+  "@resultsRemoveFilter": {
+    "description": "Tooltip of the remove button on an active filter chip"
+  },
+  "resultsFiltersIgnored": "{count, plural, =1{{filters} isn't supported by {source}, so results aren't filtered by it.} other{{filters} aren't supported by {source}, so results aren't filtered by them.}}",
+  "@resultsFiltersIgnored": {
+    "description": "Non-blocking note when the source that answered could not apply some active filters; filters is a comma-separated list of filter names",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "filters": {
+        "type": "String",
+        "example": "Type, Sort by"
+      },
+      "source": {
+        "type": "String",
+        "example": "Library Genesis"
+      }
+    }
+  },
+  "resultsSortedWithinPage": "Sorted within each page of results",
+  "@resultsSortedWithinPage": {
+    "description": "Hint when sorting was applied by the app one results page at a time"
   }
 }

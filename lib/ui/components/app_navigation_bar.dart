@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:openlib/l10n/app_localizations.dart';
+import 'package:openlib/features/eink/eink.dart' show EinkColorX;
 
 class AppNavigationBar extends StatelessWidget {
   const AppNavigationBar(
@@ -34,10 +35,10 @@ class AppNavigationBar extends StatelessWidget {
       child: RepaintBoundary(
         child: ColoredBox(
           color: isDark ? const Color(0xFF141414) : Colors.white,
-          // Keep GNav's original pills and hidden labels. Its container blocks
-          // every tap until an animation ends; direct GButtons stay responsive.
-          // The row keeps its natural size when it fits and scales down as a
-          // whole on narrow screens or with large text, so no label is clipped.
+          // GNav-style pills, icon only. GNav's container blocks every tap
+          // until an animation ends; direct GButtons stay responsive. The row
+          // keeps its natural size when it fits and scales down as a whole
+          // on narrow screens.
           child: Center(
             heightFactor: 1,
             child: FittedBox(
@@ -49,7 +50,8 @@ class AppNavigationBar extends StatelessWidget {
                     GButton(
                       active: selectedIndex == i,
                       icon: icons[i],
-                      text: labels[i],
+                      // Icon only: no text label appears on the active
+                      // tab. Screen readers still get the name.
                       semanticLabel: labels[i],
                       haptic: true,
                       debug: false,
@@ -62,10 +64,10 @@ class AppNavigationBar extends StatelessWidget {
                       // mid-animation taps.
                       curve: Curves.easeInOutCubic,
                       duration: duration,
-                      gap: 8,
+                      gap: 0,
                       iconColor: isDark ? Colors.white : Colors.black,
-                      iconActiveColor: Colors.white,
-                      textColor: Colors.white,
+                      // White on the accent; black on white in dark E-ink.
+                      iconActiveColor: Colors.white.einkBg(context),
                       iconSize: 20,
                       backgroundColor: theme.colorScheme.secondary,
                       rippleColor: Colors.transparent,

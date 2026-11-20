@@ -7,8 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // Project imports:
 import 'package:openlib/ui/extensions.dart';
+import 'package:openlib/features/eink/eink.dart' show BusyIndicator;
 import 'package:openlib/ui/results_page.dart';
 import 'package:openlib/ui/components/error_widget.dart';
+import 'package:openlib/ui/components/cover_image.dart';
 import 'package:openlib/state/state.dart'
     show getSubCategoryTypeList, enableFiltersState;
 
@@ -300,20 +302,22 @@ class BookInfoCard extends StatelessWidget {
             CachedNetworkImage(
               height: 120,
               width: 90,
+              memCacheWidth: coverCacheWidth(context, 90),
               imageUrl: thumbnail,
               imageBuilder: (context, imageProvider) => Container(
                 decoration: BoxDecoration(
                   borderRadius: const BorderRadius.all(Radius.circular(5)),
                   image: DecorationImage(
                     image: imageProvider,
-                    fit: BoxFit.fill,
+                    fit: BoxFit.cover,
                   ),
                 ),
               ),
               placeholder: (context, url) => Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(5),
-                  color: "#F8C0C8".toColor(),
+                  color: coverPlaceholderColor(
+                      context, "#F8C0C8".toColor()),
                 ),
                 height: 120,
                 width: 90,
@@ -322,7 +326,8 @@ class BookInfoCard extends StatelessWidget {
                 return Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(5),
-                    color: "#F8C0C8".toColor(),
+                    color: coverPlaceholderColor(
+                      context, "#F8C0C8".toColor()),
                   ),
                   height: 120,
                   width: 90,
@@ -430,6 +435,8 @@ class CategoryListingPage extends ConsumerWidget {
                                       CachedNetworkImage(
                                         height: imageHeight,
                                         width: imageWidth,
+                                        memCacheWidth: coverCacheWidth(
+                                            context, imageWidth),
                                         imageUrl: data[index].thumbnail!,
                                         imageBuilder:
                                             (context, imageProvider) =>
@@ -446,7 +453,7 @@ class CategoryListingPage extends ConsumerWidget {
                                                     Radius.circular(5)),
                                             image: DecorationImage(
                                               image: imageProvider,
-                                              fit: BoxFit.fill,
+                                              fit: BoxFit.cover,
                                             ),
                                           ),
                                         ),
@@ -455,7 +462,8 @@ class CategoryListingPage extends ConsumerWidget {
                                           decoration: BoxDecoration(
                                             borderRadius:
                                                 BorderRadius.circular(5),
-                                            color: "#E3E8E9".toColor(),
+                                            color: coverPlaceholderColor(
+                                                context, "#E3E8E9".toColor()),
                                           ),
                                           height: imageHeight,
                                           width: imageWidth,
@@ -465,7 +473,7 @@ class CategoryListingPage extends ConsumerWidget {
                                             decoration: BoxDecoration(
                                               borderRadius:
                                                   BorderRadius.circular(5),
-                                              color: Colors.grey,
+                                              color: coverPlaceholderColor(context, Colors.grey),
                                             ),
                                             height: imageHeight,
                                             width: imageWidth,
@@ -515,7 +523,7 @@ class CategoryListingPage extends ConsumerWidget {
                   child: SizedBox(
                 width: 25,
                 height: 25,
-                child: CircularProgressIndicator(
+                child: BusyIndicator(
                   color: Theme.of(context).colorScheme.secondary,
                   strokeCap: StrokeCap.round,
                 ),

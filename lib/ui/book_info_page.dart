@@ -1,6 +1,7 @@
 // Flutter imports:
 import 'package:flutter/material.dart';
 import 'package:openlib/l10n/app_localizations.dart';
+import 'package:openlib/features/eink/eink.dart' show BusyIndicator;
 
 // Package imports:
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +12,6 @@ import 'package:openlib/services/download_target.dart';
 import 'package:openlib/services/search_manager.dart';
 import 'package:openlib/services/download_manager.dart';
 import 'package:openlib/services/platform_utils.dart';
-import 'package:openlib/services/share_book.dart';
 import 'package:openlib/ui/components/book_info_widget.dart';
 import 'package:openlib/ui/components/error_widget.dart';
 import 'package:openlib/ui/components/file_buttons_widget.dart';
@@ -38,29 +38,6 @@ class BookInfoPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        actions: [
-          bookInfo.maybeWhen(data: (data) {
-            return IconButton(
-              icon: Icon(
-                Icons.share_sharp,
-                color: Theme.of(context).colorScheme.tertiary,
-              ),
-              iconSize: 19.0,
-              onPressed: () async {
-                final outcome = await shareBook(
-                    data.title, data.link, data.thumbnail ?? '',
-                    format: data.format);
-                if (context.mounted && outcome == ShareOutcome.pathCopied) {
-                  showSnackBar(
-                      context: context,
-                      message: AppLocalizations.of(context).copiedBookLink);
-                }
-              },
-            );
-          }, orElse: () {
-            return const SizedBox.shrink();
-          })
-        ],
       ),
       body: bookInfo.when(
         skipLoadingOnRefresh: false,
@@ -82,7 +59,7 @@ class BookInfoPage extends ConsumerWidget {
               child: SizedBox(
             width: 25,
             height: 25,
-            child: CircularProgressIndicator(
+            child: BusyIndicator(
               color: Theme.of(context).colorScheme.secondary,
               strokeCap: StrokeCap.round,
             ),
@@ -455,7 +432,7 @@ class _ActionButtonWidgetState extends ConsumerState<ActionButtonWidget> {
         return Text(error.toString());
       },
       loading: () {
-        return CircularProgressIndicator(
+        return BusyIndicator(
           color: Theme.of(context).colorScheme.secondary,
           strokeCap: StrokeCap.round,
         );

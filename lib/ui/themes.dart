@@ -12,7 +12,16 @@ final secondaryColor = '#FB0101'.toColor();
 ThemeData lightTheme = ThemeData(
   primaryColor: Colors.white,
   colorScheme: ColorScheme.light(
-    primary: Colors.white,
+    // Stock Material 3 widgets (FilledButton, dialog TextButtons, Switch,
+    // Slider, RefreshIndicator, text cursor) paint with `primary`. It was
+    // white on a white surface, so they were invisible. Black on white
+    // mirrors the dark theme, has ~21:1 contrast and keeps working on
+    // greyscale e-ink screens.
+    primary: Colors.black,
+    onPrimary: Colors.white,
+    // `surfaceTint` defaults to `primary`; keep elevated surfaces white
+    // instead of tinting them grey.
+    surfaceTint: Colors.white,
     secondary: secondaryColor,
     tertiary: Colors.black,
     tertiaryContainer: '#F2F2F2'.toColor(),

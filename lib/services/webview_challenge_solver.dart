@@ -25,9 +25,20 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 // Project imports:
+import 'package:openlib/features/eink/progress_throttle.dart'
+    show EinkProgress;
 import 'package:openlib/services/challenge_html_cache.dart';
 import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/platform_utils.dart';
+
+/// One invisible solve attempt: [solve] runs it (and must stop early once
+/// `cancelled()` returns true), [dispose] frees the engine behind it. Split
+/// out so the hard time limit and the disposal guarantee can be tested
+/// without a real Chromium.
+typedef HeadlessSolveSession = ({
+  Future<String?> Function(bool Function() cancelled) solve,
+  Future<void> Function() dispose,
+});
 
 class WebviewChallengeSolver {
   WebviewChallengeSolver._();
@@ -62,6 +73,45 @@ class WebviewChallengeSolver {
   static bool? overrideIsMobile;
 
   static bool get _isMobile => overrideIsMobile ?? PlatformUtils.isMobile;
+
+  /// Hard cap on one invisible (headless) solve, whatever the caller asked
+  /// for. A HeadlessInAppWebView is a full hidden Chromium: on low-power
+  /// e-ink readers it is the heaviest CPU/battery load in the app. The
+  /// DDoS-Guard silent JS check normally clears in 5-10 s, plus the 2 s
+  /// settle delay; 40 s leaves ~3x headroom for slow devices. Past that the
+  /// challenge almost certainly needs a human (or the engine stalled), so
+  /// the webview is disposed and the visible solver page takes over
+  /// instead of burning a hidden browser for the old 60 s.
+  static const Duration headlessSolveLimit = Duration(seconds: 40);
+
+  /// Upper bound on waiting for the headless engine to dispose, so a stuck
+  /// platform call cannot hold back the visible fallback.
+  static const Duration _headlessDisposeWait = Duration(seconds: 5);
+
+  /// The effective headless budget for a requested [timeout].
+  @visibleForTesting
+  static Duration headlessTimeoutFor(Duration timeout) =>
+      timeout < headlessSolveLimit ? timeout : headlessSolveLimit;
+
+  /// Poll interval used by the challenge/download pages and the headless
+  /// loop while E-ink mode is on. Each poll runs JS in a webview; on an
+  /// e-ink device fewer, slower polls save CPU and battery and the user
+  /// barely notices a few extra seconds.
+  static const Duration einkPollInterval = Duration(seconds: 5);
+
+  /// Picks the poll interval: [normal] usually, [einkPollInterval] while
+  /// E-ink mode is on. [eink] defaults to the service-side mirror of the
+  /// setting ([EinkProgress.enabled]).
+  static Duration pollIntervalFor(Duration normal, {bool? eink}) =>
+      (eink ?? EinkProgress.enabled) && normal < einkPollInterval
+          ? einkPollInterval
+          : normal;
+
+  /// Test seam for the headless engine; production uses a
+  /// HeadlessInAppWebView session.
+  @visibleForTesting
+  static HeadlessSolveSession Function(String url, Duration timeout)?
+      headlessSessionFactory;
 
   /// Callers discard captured pages shorter than this. The solver must not
   /// report success for a redirect stub they would throw away - that used
@@ -201,13 +251,67 @@ class WebviewChallengeSolver {
       isUsableHtml(capturedHtml) &&
       !isChallengePage(title: title, bodySnippet: '');
 
-  static Future<String?> _solveHeadless(String url, Duration timeout) async {
-    HeadlessInAppWebView? headless;
+  static Future<String?> _solveHeadless(String url, Duration timeout) {
+    final limit = headlessTimeoutFor(timeout);
+    final factory = headlessSessionFactory ?? _inAppHeadlessSession;
+    return runHeadlessSession(factory(url, limit), limit);
+  }
+
+  /// Runs [session] for at most [limit] and disposes it on every path:
+  /// success, null result, exception and timeout. The hard timeout also
+  /// covers a platform call that never returns (the inner loop's own
+  /// deadline cannot fire while it is stuck in an await).
+  @visibleForTesting
+  static Future<String?> runHeadlessSession(
+    HeadlessSolveSession session,
+    Duration limit, {
+    Duration disposeWait = _headlessDisposeWait,
+  }) async {
+    var cancelled = false;
     try {
+      // then<String?> widens a Future<String> so the null timeout value
+      // is accepted whatever the session's inferred future type is.
+      return await session
+          .solve(() => cancelled)
+          .then<String?>((html) => html)
+          .timeout(limit, onTimeout: () {
+        _logger.warning('Headless challenge solve hit its time limit',
+            tag: 'ChallengeSolver', metadata: {'limitS': limit.inSeconds});
+        return null;
+      });
+    } catch (e, st) {
+      _logger.error('Headless challenge solver failed',
+          tag: 'ChallengeSolver', error: e, stackTrace: st);
+      return null;
+    } finally {
+      cancelled = true;
+      try {
+        await session.dispose().timeout(disposeWait);
+      } catch (e) {
+        _logger.debug('Headless webview dispose failed',
+            tag: 'ChallengeSolver', metadata: {'error': e.toString()});
+      }
+    }
+  }
+
+  static HeadlessSolveSession _inAppHeadlessSession(
+      String url, Duration timeout) {
+    HeadlessInAppWebView? headless;
+    var disposed = false;
+    Future<void> dispose() async {
+      if (disposed) return;
+      disposed = true;
+      final h = headless;
+      headless = null;
+      await h?.dispose();
+    }
+
+    Future<String?> solve(bool Function() cancelled) async {
+      if (disposed) return null;
       final completer = Completer<String?>();
       final controllerHolder = Completer<InAppWebViewController>();
 
-      headless = HeadlessInAppWebView(
+      final view = headless = HeadlessInAppWebView(
         initialUrlRequest: URLRequest(url: WebUri(url)),
         initialSettings: InAppWebViewSettings(
           javaScriptEnabled: true,
@@ -247,10 +351,16 @@ class WebviewChallengeSolver {
         },
       );
 
-      unawaited(headless.run());
+      // A run() failure must not escape as an unhandled async error.
+      unawaited(view.run().catchError((Object e) {
+        _logger.debug('Headless webview run failed',
+            tag: 'ChallengeSolver', metadata: {'error': e.toString()});
+      }));
       final deadline = DateTime.now().add(timeout);
+      final pollInterval =
+          pollIntervalFor(const Duration(milliseconds: 1000));
       InAppWebViewController? controller;
-      while (DateTime.now().isBefore(deadline)) {
+      while (!cancelled() && DateTime.now().isBefore(deadline)) {
         if (completer.isCompleted) break;
         // Headless webviews can stop loading without an onLoadStop for the
         // final page; also poll the controller directly.
@@ -267,21 +377,16 @@ class WebviewChallengeSolver {
             }
           }
         } catch (_) {}
-        await Future.delayed(const Duration(milliseconds: 1000));
+        await Future.delayed(pollInterval);
       }
 
-      // The only place the completer may complete with null: the deadline.
+      // The only place the completer may complete with null: the deadline
+      // (or cancellation by the hard limit in runHeadlessSession).
       if (!completer.isCompleted) completer.complete(null);
       return await completer.future;
-    } catch (e, st) {
-      _logger.error('Headless challenge solver failed',
-          tag: 'ChallengeSolver', error: e, stackTrace: st);
-      return null;
-    } finally {
-      try {
-        await headless?.dispose();
-      } catch (_) {}
     }
+
+    return (solve: solve, dispose: dispose);
   }
 
   static Future<InAppWebViewController?> _waitForController(

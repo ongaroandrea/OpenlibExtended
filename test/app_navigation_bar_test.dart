@@ -3,16 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/ui/components/app_navigation_bar.dart';
 
-double labelOpacity(WidgetTester tester, String label) {
-  var opacity = 1.0;
-  tester.element(find.text(label)).visitAncestorElements((element) {
-    final widget = element.widget;
-    if (widget is Opacity) opacity *= widget.opacity;
-    return true;
-  });
-  return opacity;
-}
-
 Future<void> pumpBar(WidgetTester tester, List<int> selected) async {
   var index = 0;
   await tester.pumpWidget(MaterialApp(
@@ -55,14 +45,21 @@ void main() {
     await tester.binding.setSurfaceSize(null);
   });
 
-  testWidgets('keeps the original icon-only inactive tabs and selected label',
+  testWidgets('tabs are icon only, with names kept for screen readers',
       (tester) async {
+    final semantics = tester.ensureSemantics();
     await pumpBar(tester, []);
-    expect(labelOpacity(tester, 'Home'), 1);
-    for (final label in ['Search', 'My Library', 'Settings']) {
-      expect(labelOpacity(tester, label), 0,
-          reason: 'inactive labels stay hidden in the original design');
+    for (final label in ['Home', 'Search', 'My Library', 'Settings']) {
+      expect(find.text(label), findsNothing,
+          reason: 'no text label is drawn on the bar');
+      expect(find.bySemanticsLabel(label), findsOneWidget,
+          reason: 'TalkBack still announces the tab');
     }
+    // Selecting a tab must not reveal a label either.
+    await tester.tap(find.byIcon(Icons.search).last);
+    await tester.pumpAndSettle();
+    expect(find.text('Search'), findsNothing);
+    semantics.dispose();
   });
 
   testWidgets('a second tab tap is accepted while the first pill is animating',
@@ -77,27 +74,6 @@ void main() {
     expect(selected, [1, 3],
         reason: 'animation must never lock out a subsequent navigation tap');
     await tester.pump(const Duration(milliseconds: 200));
-    expect(labelOpacity(tester, 'Settings'), 1);
-    expect(labelOpacity(tester, 'Search'), 0);
-    expect(labelOpacity(tester, 'Home'), 0);
     expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('label reveal progresses smoothly and finishes within 200 ms',
-      (tester) async {
-    await pumpBar(tester, []);
-    await tester.tap(find.byIcon(Icons.search).last);
-    await tester.pump();
-    final opacities = <double>[];
-    for (var frame = 0; frame < 5; frame++) {
-      await tester.pump(const Duration(milliseconds: 40));
-      opacities.add(labelOpacity(tester, 'Search'));
-    }
-    expect(opacities.first, greaterThan(0));
-    expect(opacities.first, lessThan(1));
-    for (var i = 1; i < opacities.length; i++) {
-      expect(opacities[i], greaterThanOrEqualTo(opacities[i - 1]));
-    }
-    expect(opacities.last, 1);
   });
 }

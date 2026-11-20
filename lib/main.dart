@@ -25,6 +25,7 @@ import 'package:openlib/ui/mylibrary_page.dart';
 import 'package:openlib/ui/search_page.dart';
 import 'package:openlib/ui/settings_page.dart';
 import 'package:openlib/ui/themes.dart';
+import 'package:openlib/features/eink/eink.dart';
 import 'package:openlib/ui/onboarding/onboarding_page.dart';
 import 'package:openlib/ui/challenge_solver_page.dart';
 import 'package:openlib/ui/whats_new_page.dart';
@@ -36,6 +37,7 @@ import 'package:openlib/services/download_notification.dart';
 import 'package:openlib/services/instance_manager.dart';
 import 'package:openlib/state/state.dart'
     show
+        supportedFileTypeValue,
         ThemeModeNotifier,
         selectedIndexProvider,
         installedReadersProvider,
@@ -118,6 +120,8 @@ void main(List<String> args) async {
       : true;
   WebviewChallengeSolver.headlessEnabled = backgroundVerification;
 
+  bool einkMode = await loadEinkMode(dataBase);
+
   String browserUserAgent = await dataBase.getBrowserOptions('userAgent');
   String browserCookie = await dataBase.getBrowserOptions('cookie');
 
@@ -132,8 +136,8 @@ void main(List<String> args) async {
       'Most Relevant';
   String savedFileType = await dataBase
           .getPreference('filterFileType')
-          .catchError((e) => 'All') as String? ??
-      'All';
+          .catchError((e) => supportedFileTypeValue) as String? ??
+      supportedFileTypeValue;
   String savedLanguage = await dataBase
           .getPreference('filterLanguage')
           .catchError((e) => 'All') as String? ??
@@ -209,6 +213,7 @@ void main(List<String> args) async {
             .overrideWith((ref) => showManualDownloadButton),
         backgroundVerificationProvider
             .overrideWith((ref) => backgroundVerification),
+        einkModeProvider.overrideWith((ref) => einkMode),
         donationKeyProvider.overrideWith((ref) => savedDonationKey),
         userAgentProvider.overrideWith((ref) => browserUserAgent),
         cookieProvider.overrideWith((ref) => browserCookie),
@@ -227,14 +232,27 @@ void main(List<String> args) async {
 }
 
 /// Scrolling tuned for the snappy complaint on newer Androids: touch
-/// input gets momentum-based physics with a clamped stop at the edges
-/// (no iOS-style bounce-back), so lists decelerate naturally instead of
-/// halting on a dime when the finger lifts.
+/// input gets momentum-based physics so lists decelerate naturally
+/// instead of halting on a dime when the finger lifts.
+///
+/// In E-ink mode scrolling stops with the finger and shows no overscroll
+/// effect (lib/features/eink).
 class _SmoothScrollBehavior extends MaterialScrollBehavior {
-  const _SmoothScrollBehavior();
+  final bool eink;
+  const _SmoothScrollBehavior({this.eink = false});
+
+  @override
+  Widget buildOverscrollIndicator(
+      BuildContext context, Widget child, ScrollableDetails details) {
+    if (eink) return child;
+    return super.buildOverscrollIndicator(context, child, details);
+  }
 
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) {
+    if (eink) {
+      return const EinkScrollPhysics(parent: AlwaysScrollableScrollPhysics());
+    }
     return const BouncingScrollPhysics(
       decelerationRate: ScrollDecelerationRate.fast,
       parent: AlwaysScrollableScrollPhysics(),
@@ -246,6 +264,44 @@ class _SmoothScrollBehavior extends MaterialScrollBehavior {
 /// widget) can push the visible solver page from anywhere.
 final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
+/// Largest text scale the app applies, system and app factor combined.
+const double maxAppTextScale = 3.0;
+
+/// The system font size (Android/iOS accessibility setting) multiplied by
+/// the app's own text-size slider, capped at [maxAppTextScale].
+///
+/// The slider used to replace the system scale, so users who rely on a
+/// large system font lost it inside the app.
+TextScaler composeTextScaler(TextScaler system, double appScale) =>
+    _ComposedTextScaler(system, appScale);
+
+class _ComposedTextScaler extends TextScaler {
+  const _ComposedTextScaler(this.system, this.appScale);
+
+  final TextScaler system;
+  final double appScale;
+
+  @override
+  double scale(double fontSize) {
+    final scaled = system.scale(fontSize) * appScale;
+    final max = fontSize * maxAppTextScale;
+    return scaled > max ? max : scaled;
+  }
+
+  @override
+  // ignore: deprecated_member_use
+  double get textScaleFactor => scale(14) / 14;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _ComposedTextScaler &&
+      other.system == system &&
+      other.appScale == appScale;
+
+  @override
+  int get hashCode => Object.hash(system, appScale);
+}
+
 class MyApp extends ConsumerWidget {
   final bool onboardingCompleted;
 
@@ -256,9 +312,10 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final eink = ref.watch(einkModeProvider);
     return MaterialApp(
       navigatorKey: _navigatorKey,
-      scrollBehavior: const _SmoothScrollBehavior(),
+      scrollBehavior: _SmoothScrollBehavior(eink: eink),
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -270,16 +327,19 @@ class MyApp extends ConsumerWidget {
       locale: ref.watch(localeOverrideProvider),
       builder: (context, child) {
         final scale = ref.watch(fontSizeScaleProvider);
+        final media = MediaQuery.of(context);
         return MediaQuery(
-          data: MediaQuery.of(context)
-              .copyWith(textScaler: TextScaler.linear(scale)),
+          data: applyEinkMediaQuery(
+              media.copyWith(
+                  textScaler: composeTextScaler(media.textScaler, scale)),
+              eink),
           child: child!,
         );
       },
       debugShowCheckedModeBanner: false,
       title: 'OpenlibExtended',
-      theme: lightTheme,
-      darkTheme: darkTheme,
+      theme: eink ? einkTheme(lightTheme) : lightTheme,
+      darkTheme: eink ? einkTheme(darkTheme) : darkTheme,
       themeMode: ref.watch(themeModeProvider),
       home: !onboardingCompleted
           ? const OnboardingPage()
@@ -354,6 +414,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
     // Small delay to let the UI settle first.
     await Future.delayed(const Duration(seconds: 1));
     if (!mounted) return;
+    // Restores the cached list; hits open-slum.org at most once per 24 h
+    // (or when nothing is cached).
     await InstanceManager().refreshOnStartup();
   }
 
@@ -363,7 +425,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
     if (!mounted) return;
 
     try {
-      await UpdateCheckerService().checkAndShowUpdateDialog(context);
+      // At most once per 24 h; the Settings button always checks.
+      await UpdateCheckerService().checkOnStartupIfDue(context);
     } catch (e) {
       // Silently fail on startup - user can manually check in settings
       debugPrint("Update check failed: $e");
@@ -469,10 +532,16 @@ class _MainScreenState extends ConsumerState<MainScreen>
           child: IndexedStack(
             index: selectedIndex,
             children: [
+              // Hidden tabs stay mounted (scroll position, state) but their
+              // tickers are paused, and widgets such as the downloads panel
+              // read TickerMode to stop rebuilding while off-screen.
               for (var i = 0; i < _widgetOptions.length; i++)
-                _visitedTabs.contains(i)
-                    ? _widgetOptions[i]
-                    : const SizedBox.shrink(),
+                TickerMode(
+                  enabled: i == selectedIndex,
+                  child: _visitedTabs.contains(i)
+                      ? _widgetOptions[i]
+                      : const SizedBox.shrink(),
+                ),
             ],
           ),
         ),

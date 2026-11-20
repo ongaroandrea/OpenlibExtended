@@ -16,31 +16,130 @@ import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/platform_utils.dart';
 import 'package:openlib/ui/challenge_solver_page.dart';
 
-class CustomErrorWidget extends StatelessWidget {
+/// Localized, user-facing copy for a [NetworkError].
+///
+/// The service layer has no BuildContext, so its English
+/// [NetworkError.userMessage]/[NetworkError.solution] stay as log text;
+/// screens show these instead.
+extension NetworkErrorText on NetworkError {
+  bool get _allSourcesFailed =>
+      type == NetworkErrorType.serverUnavailable && failedSources.isNotEmpty;
+
+  String title(AppLocalizations l10n) {
+    if (_allSourcesFailed) return l10n.errorSourcesFailedTitle;
+    switch (type) {
+      case NetworkErrorType.noInternet:
+        return l10n.errorNoInternetTitle;
+      case NetworkErrorType.cloudflareBlock:
+        return l10n.errorBlockedTitle;
+      case NetworkErrorType.serverUnavailable:
+        return l10n.errorServerUnavailableTitle;
+      case NetworkErrorType.timeout:
+        return l10n.errorTimeoutTitle;
+      case NetworkErrorType.forbidden:
+        return l10n.errorForbiddenTitle;
+      case NetworkErrorType.rateLimited:
+        return l10n.errorRateLimitedTitle;
+      case NetworkErrorType.sslError:
+        return l10n.errorSslTitle;
+      case NetworkErrorType.dnsError:
+        return l10n.errorDnsTitle;
+      case NetworkErrorType.unknown:
+        return l10n.errorUnknownTitle;
+    }
+  }
+
+  String advice(AppLocalizations l10n) {
+    if (_allSourcesFailed) {
+      return l10n.errorSourcesFailedBody(failedSources.join(', '));
+    }
+    switch (type) {
+      case NetworkErrorType.noInternet:
+        return l10n.errorNoInternetBody;
+      case NetworkErrorType.cloudflareBlock:
+        return l10n.errorBlockedBody;
+      case NetworkErrorType.serverUnavailable:
+        return l10n.errorServerUnavailableBody;
+      case NetworkErrorType.timeout:
+        return l10n.errorTimeoutBody;
+      case NetworkErrorType.forbidden:
+        return l10n.errorForbiddenBody;
+      case NetworkErrorType.rateLimited:
+        return l10n.errorRateLimitedBody;
+      case NetworkErrorType.sslError:
+        return l10n.errorSslBody;
+      case NetworkErrorType.dnsError:
+        return l10n.errorDnsBody;
+      case NetworkErrorType.unknown:
+        return l10n.errorUnknownBody;
+    }
+  }
+}
+
+/// Converts any error into a [NetworkError] (classification logs once).
+NetworkError toNetworkError(Object error) {
+  if (error is NetworkError) return error;
+  // Legacy socket exception marker
+  if (error.toString().contains("socketException")) {
+    return NetworkError(
+      type: NetworkErrorType.noInternet,
+      userMessage: "Unable to access the internet",
+      solution:
+          "Check your internet connection. Make sure WiFi or mobile data is enabled.",
+    );
+  }
+  return NetworkError.fromException(error);
+}
+
+class CustomErrorWidget extends StatefulWidget {
   final Object error;
   final StackTrace stackTrace;
   final VoidCallback? onRefresh;
 
-  CustomErrorWidget({
+  const CustomErrorWidget({
     super.key,
     required this.error,
     required this.stackTrace,
     this.onRefresh,
-  }) {
-    // Log the error for debugging
-    final logger = AppLogger();
-    logger.error(
+  });
+
+  @override
+  State<CustomErrorWidget> createState() => _CustomErrorWidgetState();
+}
+
+class _CustomErrorWidgetState extends State<CustomErrorWidget> {
+  late NetworkError _networkError;
+
+  Object get error => widget.error;
+  VoidCallback? get onRefresh => widget.onRefresh;
+
+  // Logged and classified once per distinct error - not on every
+  // rebuild (theme, locale or text-scale changes rebuild this widget).
+  void _adopt() {
+    AppLogger().error(
       "Error displayed to user",
       tag: "ErrorWidget",
-      error: error,
-      stackTrace: stackTrace,
+      error: widget.error,
+      stackTrace: widget.stackTrace,
     );
+    _networkError = toNetworkError(widget.error);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _adopt();
+  }
+
+  @override
+  void didUpdateWidget(CustomErrorWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.error, widget.error)) _adopt();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Convert error to NetworkError for unified handling
-    final networkError = _parseError(error);
+    final networkError = _networkError;
 
     return SingleChildScrollView(
       child: Padding(
@@ -67,26 +166,6 @@ class CustomErrorWidget extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  // Parse any error into a NetworkError
-  NetworkError _parseError(Object error) {
-    if (error is NetworkError) {
-      return error;
-    }
-
-    // Check for legacy socket exception marker
-    if (error.toString().contains("socketException")) {
-      return NetworkError(
-        type: NetworkErrorType.noInternet,
-        userMessage: "Unable to access the internet",
-        solution:
-            "Check your internet connection. Make sure WiFi or mobile data is enabled.",
-      );
-    }
-
-    // Convert to NetworkError
-    return NetworkError.fromException(error);
   }
 
   // Build appropriate icon based on error type
@@ -172,7 +251,7 @@ class CustomErrorWidget extends StatelessWidget {
         Icon(iconData, size: 48, color: iconColor),
         const SizedBox(height: 12),
         Text(
-          networkError.userMessage,
+          networkError.title(AppLocalizations.of(context)),
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 22,
@@ -212,7 +291,7 @@ class CustomErrorWidget extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                "What to do",
+                AppLocalizations.of(context).errorWhatToDo,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -223,7 +302,7 @@ class CustomErrorWidget extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            networkError.solution,
+            networkError.advice(AppLocalizations.of(context)),
             style: TextStyle(
               fontSize: 15,
               height: 1.5,
@@ -282,7 +361,7 @@ class CustomErrorWidget extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  "A VPN can help bypass regional blocks and access the content.",
+                  AppLocalizations.of(context).errorVpnHint,
                   style: TextStyle(
                     fontSize: 13,
                     color: Colors.blue[800],
@@ -352,7 +431,7 @@ class CustomErrorWidget extends StatelessWidget {
 
   // Open browser to allow user to manually solve captcha/verification
   void _openInBrowser(BuildContext context) {
-    final networkError = _parseError(error);
+    final networkError = _networkError;
     final targetUrl = networkError.blockedUrl;
     
     // Show dialog with embedded and system browser options
@@ -373,7 +452,7 @@ class CustomErrorWidget extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "The site is asking you to verify that you're human. We'll open a browser window where you can complete the verification.",
+                AppLocalizations.of(context).errorVerifyIntro,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 16),
@@ -390,7 +469,7 @@ class CustomErrorWidget extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        "Once you complete the verification, return to the app and tap 'Try Again'.",
+                        AppLocalizations.of(context).errorVerifyReturnHint,
                         style: TextStyle(
                           fontSize: 13,
                           color: Colors.blue[700],
@@ -442,7 +521,7 @@ class CustomErrorWidget extends StatelessWidget {
   // HTML. On desktop the in-app webview plugin is unavailable, so the system
   // browser is the only manual fallback.
   void _triggerBrowserVerification(BuildContext context) {
-    final networkError = _parseError(error);
+    final networkError = _networkError;
     final targetUrl = networkError.blockedUrl;
 
     if (targetUrl == null) {
@@ -495,7 +574,8 @@ class CustomErrorWidget extends StatelessWidget {
               children: [
                 if (networkError.technicalDetails != null) ...[
                   Text(
-                    "Error: ${networkError.technicalDetails}",
+                    AppLocalizations.of(context)
+                        .errorLabel(networkError.technicalDetails!),
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
@@ -510,8 +590,9 @@ class CustomErrorWidget extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: SelectableText(
-                    _formatResponseBody(
-                        networkError.rawResponseBody ?? "No content available"),
+                    _formatResponseBody(context,
+                        networkError.rawResponseBody ??
+                            AppLocalizations.of(context).errorNoContent),
                     style: const TextStyle(
                       fontFamily: "monospace",
                       fontSize: 11,
@@ -546,10 +627,11 @@ class CustomErrorWidget extends StatelessWidget {
   }
 
   // Format response body for display
-  String _formatResponseBody(String body) {
+  String _formatResponseBody(BuildContext context, String body) {
     // Limit length for display
     if (body.length > 3000) {
-      return "${body.substring(0, 3000)}\n\n... (truncated, ${body.length} total characters)";
+      return "${body.substring(0, 3000)}\n\n"
+          "${AppLocalizations.of(context).errorTruncated(body.length)}";
     }
     return body;
   }
@@ -612,8 +694,8 @@ class CustomErrorWidget extends StatelessWidget {
 class ErrorSnackbar {
   static void show(BuildContext context, Object error,
       {VoidCallback? onRetry}) {
-    final networkError =
-        error is NetworkError ? error : NetworkError.fromException(error);
+    final networkError = toNetworkError(error);
+    final l10n = AppLocalizations.of(context);
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -622,19 +704,19 @@ class ErrorSnackbar {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              networkError.userMessage,
+              networkError.title(l10n),
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             Text(
-              networkError.solution.split("\n").first,
+              networkError.advice(l10n),
               style: const TextStyle(fontSize: 12),
             ),
           ],
         ),
         action: onRetry != null
             ? SnackBarAction(
-                label: "Retry",
+                label: l10n.retry,
                 onPressed: onRetry,
               )
             : null,

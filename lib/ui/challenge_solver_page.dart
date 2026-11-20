@@ -24,6 +24,15 @@ class ChallengeSolverPage extends StatefulWidget {
 
   final String url;
 
+  /// Poll cadence normally; E-ink mode slows it down (see
+  /// WebviewChallengeSolver.pollIntervalFor).
+  static const Duration pollInterval = Duration(seconds: 2);
+
+  /// Overall cap: after this long without a solved page the polling stops
+  /// and the page pops with `false`, so callers show their existing error
+  /// and retry UI instead of a visible webview polling forever.
+  static const Duration giveUpAfter = Duration(minutes: 5);
+
   @override
   State<ChallengeSolverPage> createState() => _ChallengeSolverPageState();
 }
@@ -32,20 +41,42 @@ class _ChallengeSolverPageState extends State<ChallengeSolverPage> {
   final AppLogger _logger = AppLogger();
   InAppWebViewController? _controller;
   Timer? _pollTimer;
+  Timer? _giveUpTimer;
   bool _done = false;
+  // A tick can outlast the interval (JS calls + 2 s settle); never run two
+  // at once - that doubled the webview work and could pop twice.
+  bool _polling = false;
 
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _giveUpTimer?.cancel();
     super.dispose();
   }
 
-  void _startPolling() {
-    _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
-      if (_done || !mounted) return;
-      final controller = _controller;
-      if (controller == null) return;
+  void _giveUp() {
+    if (_done || !mounted) return;
+    _done = true;
+    _pollTimer?.cancel();
+    _logger.warning('Solver page gave up without a solved page',
+        tag: 'ChallengeSolver', metadata: {'url': widget.url});
+    Navigator.pop(context, false);
+  }
 
+  void _startPolling() {
+    _pollTimer?.cancel();
+    _giveUpTimer ??= Timer(ChallengeSolverPage.giveUpAfter, _giveUp);
+    _pollTimer = Timer.periodic(
+        WebviewChallengeSolver.pollIntervalFor(
+            ChallengeSolverPage.pollInterval), (timer) async {
+      if (_done || !mounted) {
+        timer.cancel();
+        return;
+      }
+      final controller = _controller;
+      if (controller == null || _polling) return;
+
+      _polling = true;
       try {
         final title = (await controller.getTitle()) ?? '';
         final bodySnippet = (await controller.evaluateJavascript(
@@ -74,6 +105,7 @@ class _ChallengeSolverPageState extends State<ChallengeSolverPage> {
         final html = (await controller.evaluateJavascript(
                 source: "document.documentElement.outerHTML"))
             ?.toString() ?? '';
+        if (_done || !mounted) return;
         if (html.isNotEmpty) {
           _done = true;
           ChallengeHtmlCache.store(widget.url, html);
@@ -81,10 +113,13 @@ class _ChallengeSolverPageState extends State<ChallengeSolverPage> {
               tag: 'ChallengeSolver',
               metadata: {'url': widget.url, 'length': html.length});
           _pollTimer?.cancel();
+          _giveUpTimer?.cancel();
           if (mounted) Navigator.pop(context, true);
         }
       } catch (_) {
         // webview might be mid-navigation; keep polling
+      } finally {
+        _polling = false;
       }
     });
   }

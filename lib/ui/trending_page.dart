@@ -7,8 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // Project imports:
 import 'package:openlib/ui/components/error_widget.dart';
+import 'package:openlib/features/eink/eink.dart' show BusyIndicator;
 import 'package:openlib/ui/results_page.dart';
 import 'extensions.dart';
+import 'package:openlib/ui/components/cover_image.dart';
 
 import 'package:openlib/state/state.dart'
     show getTrendingBooks, enableFiltersState;
@@ -60,6 +62,8 @@ class TrendingPage extends ConsumerWidget {
                                   CachedNetworkImage(
                                     height: imageHeight,
                                     width: imageWidth,
+                                    memCacheWidth:
+                                        coverCacheWidth(context, imageWidth),
                                     imageUrl: data[index].thumbnail!,
                                     imageBuilder: (context, imageProvider) =>
                                         Container(
@@ -74,14 +78,15 @@ class TrendingPage extends ConsumerWidget {
                                             Radius.circular(5)),
                                         image: DecorationImage(
                                           image: imageProvider,
-                                          fit: BoxFit.fill,
+                                          fit: BoxFit.cover,
                                         ),
                                       ),
                                     ),
                                     placeholder: (context, url) => Container(
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(5),
-                                        color: "#E3E8E9".toColor(),
+                                        color: coverPlaceholderColor(
+                                            context, "#E3E8E9".toColor()),
                                       ),
                                       height: imageHeight,
                                       width: imageWidth,
@@ -91,7 +96,7 @@ class TrendingPage extends ConsumerWidget {
                                         decoration: BoxDecoration(
                                           borderRadius:
                                               BorderRadius.circular(5),
-                                          color: Colors.grey,
+                                          color: coverPlaceholderColor(context, Colors.grey),
                                         ),
                                         height: imageHeight,
                                         width: imageWidth,
@@ -141,7 +146,7 @@ class TrendingPage extends ConsumerWidget {
               child: SizedBox(
             width: 25,
             height: 25,
-            child: CircularProgressIndicator(
+            child: BusyIndicator(
               color: Theme.of(context).colorScheme.secondary,
               strokeCap: StrokeCap.round,
             ),

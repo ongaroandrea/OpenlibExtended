@@ -33,6 +33,13 @@ class NetworkError implements Exception {
   final String? rawResponseBody;
   final String? blockedUrl; // URL that was blocked (for opening in browser)
 
+  /// Display names of the search sources that failed, when this error
+  /// stands for "every source failed" rather than a single request.
+  final List<String> failedSources;
+
+  // [userMessage] and [solution] are English, developer-facing defaults
+  // (logs, exports). The UI shows localized copy chosen by [type] and
+  // [failedSources] - see `NetworkErrorText` in error_widget.dart.
   NetworkError({
     required this.type,
     required this.userMessage,
@@ -40,7 +47,28 @@ class NetworkError implements Exception {
     this.technicalDetails,
     this.rawResponseBody,
     this.blockedUrl,
+    this.failedSources = const [],
   });
+
+  /// The device has no internet connection.
+  factory NetworkError.offline() => NetworkError(
+        type: NetworkErrorType.noInternet,
+        userMessage: "You're offline",
+        solution:
+            "Check that Wi-Fi or mobile data is on and airplane mode is off, then try again.",
+        technicalDetails: "No internet connectivity detected",
+      );
+
+  /// Every search source failed while the device is online.
+  factory NetworkError.sourcesUnavailable(List<String> sources) =>
+      NetworkError(
+        type: NetworkErrorType.serverUnavailable,
+        userMessage: "No search source responded",
+        solution:
+            "${sources.join(', ')} didn't respond. They may be down or blocked on your network. Try again, or try another network or a VPN.",
+        technicalDetails: "All search sources failed: ${sources.join(', ')}",
+        failedSources: sources,
+      );
 
   @override
   String toString() => "NetworkError.${type.name}";
@@ -113,8 +141,7 @@ class NetworkError implements Exception {
     return NetworkError(
       type: NetworkErrorType.unknown,
       userMessage: "Something went wrong",
-      solution:
-          "Please try again. If the problem persists, try restarting the app.",
+      solution: "Please try again, or pick another source.",
       technicalDetails: error.toString(),
     );
   }
@@ -191,8 +218,7 @@ class NetworkError implements Exception {
     return NetworkError(
       type: NetworkErrorType.unknown,
       userMessage: "Something went wrong",
-      solution:
-          "Please try again. If the problem persists, try restarting the app.",
+      solution: "Please try again, or pick another source.",
       technicalDetails: error.toString(),
     );
   }
@@ -411,7 +437,7 @@ class NetworkError implements Exception {
           type: NetworkErrorType.unknown,
           userMessage: "An unexpected error occurred",
           solution:
-              "Please try again. If the problem continues, restart the app.",
+              "Please try again, or pick another source.",
           technicalDetails: error.message,
         );
     }

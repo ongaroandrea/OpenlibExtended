@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // Project imports:
 import 'package:openlib/services/instance_manager.dart';
+import 'package:openlib/features/eink/eink.dart' show BusyIndicator;
 import 'package:openlib/state/state.dart';
 import 'package:openlib/ui/components/page_title_widget.dart';
 
@@ -197,7 +198,7 @@ class _InstancesPageState extends ConsumerState<InstancesPage> {
       },
       loading: () => const Padding(
         padding: EdgeInsets.all(16),
-        child: Center(child: CircularProgressIndicator()),
+        child: Center(child: BusyIndicator()),
       ),
       error: (error, _) => ListTile(
         dense: true,

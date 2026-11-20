@@ -5,6 +5,7 @@ import 'dart:io' as io;
 // Flutter imports:
 import 'package:flutter/material.dart';
 import 'package:openlib/l10n/app_localizations.dart';
+import 'package:openlib/features/eink/eink.dart' show BusyIndicator;
 
 // Package imports:
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +18,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:openlib/services/platform_utils.dart';
 import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/ddos_protection_handler.dart';
+import 'package:openlib/services/webview_challenge_solver.dart';
 
 class Webview extends ConsumerStatefulWidget {
   const Webview({
@@ -51,6 +53,13 @@ class _WebviewState extends ConsumerState<Webview> {
   /// finishes loading (or a direct file link the WebView cannot render)
   /// left "Preparing download..." on screen forever (issue #117).
   static const Duration _overlayTimeoutDuration = Duration(seconds: 60);
+
+  /// Desktop link polling: normal cadence (E-ink mode slows it, see
+  /// WebviewChallengeSolver.pollIntervalFor) and an overall cap. After the
+  /// cap the page stops polling and returns what it has, exactly like the
+  /// Done button, instead of running JS in the window forever.
+  static const Duration desktopPollInterval = Duration(seconds: 3);
+  static const Duration desktopPollLimit = Duration(minutes: 5);
 
   @override
   void initState() {
@@ -136,11 +145,28 @@ class _WebviewState extends ConsumerState<Webview> {
 
   void _startPolling() {
     _pollingTimer?.cancel();
-    // Poll every 3 seconds for download links or solved challenges
-    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+    if (_linksFound || !mounted) return;
+    final pollingStarted = DateTime.now();
+    // Poll for download links or solved challenges (slower in E-ink mode)
+    _pollingTimer = Timer.periodic(
+        WebviewChallengeSolver.pollIntervalFor(desktopPollInterval),
+        (timer) async {
       final webview = _desktopWebview;
       if (_linksFound || webview == null || !mounted) {
         timer.cancel();
+        return;
+      }
+      if (DateTime.now().difference(pollingStarted) >= desktopPollLimit) {
+        timer.cancel();
+        _pollingTimer = null;
+        _linksFound = true;
+        _overlayTimeout?.cancel();
+        _logger.warning('Stopped polling the desktop webview (time limit)',
+            tag: 'WebView',
+            metadata: {'links_captured': _capturedDownloadLinks.length});
+        // Same as the Done button: the window stays (GTK close crash).
+        _desktopWebview = null;
+        Navigator.pop(context, List<String>.from(_capturedDownloadLinks));
         return;
       }
 
@@ -495,7 +521,7 @@ class _WebviewState extends ConsumerState<Webview> {
                         SizedBox(
                           width: 40,
                           height: 40,
-                          child: CircularProgressIndicator(
+                          child: BusyIndicator(
                             color: Theme.of(context).colorScheme.secondary,
                             strokeWidth: 3,
                           ),

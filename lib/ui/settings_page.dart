@@ -8,24 +8,33 @@ import 'package:share_plus/share_plus.dart';
 import 'package:openlib/services/backup_service.dart';
 
 // Flutter imports:
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 
 // Package imports:
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/files.dart';
 import 'package:openlib/services/platform_utils.dart';
 import 'package:openlib/services/update_checker.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 // Project imports:
 import 'package:openlib/services/database.dart';
+import 'package:openlib/features/eink/eink.dart'
+    show
+        BusyIndicator,
+        EinkColors,
+        EinkColorX,
+        einkModeProvider,
+        setEinkMode,
+        volumeKeyPagingChoiceProvider,
+        volumeKeyPagingProvider;
 import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/search_manager.dart';
 import 'package:openlib/services/webview_challenge_solver.dart';
 import 'package:openlib/ui/components/snack_bar_widget.dart';
+import 'package:openlib/ui/components/folder_access_dialog.dart';
 import 'package:openlib/ui/components/reader_app_setting.dart';
 import 'package:openlib/ui/about_page.dart';
 import 'package:openlib/ui/instances_page.dart';
@@ -57,8 +66,8 @@ Future<void> scanAndImportBooks(
         final fileName = entity.path.split('/').last;
         final extension = fileName.split('.').last.toLowerCase();
 
-        // Only process epub and pdf files
-        if (extension == 'epub' || extension == 'pdf') {
+        // Only formats the app can open (EPUB, PDF, CBR, CBZ)
+        if (supportedBookExtensions.contains(extension)) {
           // Extract the md5 hash from the filename (the part before the extension)
           final parts = fileName.split('.');
           if (parts.length >= 2) {
@@ -98,35 +107,6 @@ Future<void> scanAndImportBooks(
   }
 }
 
-Future<void> requestStoragePermission() async {
-  // Desktop platforms don't require runtime storage permissions
-  if (PlatformUtils.isDesktop) return;
-
-  // Check whether the device is running Android 11 or higher
-  DeviceInfoPlugin plugin = DeviceInfoPlugin();
-  AndroidDeviceInfo android = await plugin.androidInfo;
-  // Android < 11
-  if (android.version.sdkInt < 33) {
-    if (await Permission.storage.request().isGranted) {
-      // Permission granted
-    } else if (await Permission.storage.request().isPermanentlyDenied) {
-      await openAppSettings();
-    }
-  }
-  // Android > 11
-  else {
-    if (await Permission.manageExternalStorage.request().isGranted) {
-      // Permission granted
-    } else if (await Permission.manageExternalStorage
-        .request()
-        .isPermanentlyDenied) {
-      await openAppSettings();
-    } else if (await Permission.manageExternalStorage.request().isDenied) {
-      // Permission denied
-    }
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Shared building blocks: every settings row renders through these, so all
 // sections share one card shape, spacing and typography.
@@ -147,7 +127,12 @@ class _SettingsSectionHeader extends StatelessWidget {
         style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.bold,
-          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
+          // Black on light, white on dark; solid in e-ink mode.
+          color: Theme.of(context)
+              .colorScheme
+              .primary
+              .einkFg(context)
+              .einkText(context, 0.8),
         ),
       ),
     );
@@ -168,6 +153,7 @@ class _SettingsCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.tertiaryContainer,
+        border: EinkColors.of(context).border,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -206,7 +192,7 @@ class _SettingsTile extends StatelessWidget {
         ? const SizedBox(
             width: 22,
             height: 22,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: BusyIndicator(strokeWidth: 2),
           )
         : const Icon(Icons.chevron_right);
 
@@ -214,7 +200,10 @@ class _SettingsTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       child: Material(
         color: scheme.tertiaryContainer,
-        borderRadius: BorderRadius.circular(12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: EinkColors.of(context).outline,
+        ),
         clipBehavior: Clip.antiAlias,
         child: ListTile(
           onTap: onTap,
@@ -251,12 +240,16 @@ class _SettingsSwitchTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       child: Material(
         color: Theme.of(context).colorScheme.tertiaryContainer,
-        borderRadius: BorderRadius.circular(12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: EinkColors.of(context).outline,
+        ),
         clipBehavior: Clip.antiAlias,
         child: SwitchListTile(
           value: value,
           onChanged: onChanged,
-          activeThumbColor: Theme.of(context).colorScheme.secondary,
+          activeThumbColor:
+              Theme.of(context).colorScheme.secondary.einkBg(context),
           title:
               Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
           subtitle: subtitle != null
@@ -278,6 +271,7 @@ class SettingsPage extends ConsumerWidget {
     final showManualDownload = ref.watch(showManualDownloadButtonProvider);
     final backgroundVerification = ref.watch(backgroundVerificationProvider);
     final fontSizeScale = ref.watch(fontSizeScaleProvider);
+    final einkMode = ref.watch(einkModeProvider);
     final l10n = AppLocalizations.of(context);
 
     MyLibraryDb dataBase = MyLibraryDb.instance;
@@ -340,6 +334,12 @@ class SettingsPage extends ConsumerWidget {
                     },
                   ),
                 ),
+                _SettingsSwitchTile(
+                  title: l10n.einkMode,
+                  subtitle: l10n.einkModeHint,
+                  value: einkMode,
+                  onChanged: (val) => setEinkMode(ref, dataBase, val),
+                ),
                 _SettingsCard(
                   title: l10n.fontSizeTitle,
                   child: Column(
@@ -353,8 +353,9 @@ class SettingsPage extends ConsumerWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          Text(l10n.preview,
-                              textScaler: TextScaler.linear(fontSizeScale)),
+                          // The app's builder already applies system x
+                          // slider scale, so the ambient scaler previews it.
+                          Text(l10n.preview),
                         ],
                       ),
                       Slider(
@@ -393,7 +394,13 @@ class SettingsPage extends ConsumerWidget {
                         String? pickedDirectory =
                             await pickBookStorageDirectory();
                         if (pickedDirectory == null) return;
-                        await requestStoragePermission();
+                        // Ask for storage access only if this folder needs
+                        // it; otherwise keep the current folder.
+                        if (!context.mounted) return;
+                        if (!await ensureBookFolderAccess(
+                            context, pickedDirectory)) {
+                          return;
+                        }
 
                         // Move the books from wherever they live now - the
                         // old code only moved them when leaving the internal
@@ -422,6 +429,16 @@ class SettingsPage extends ConsumerWidget {
                 _SettingsSectionHeader(l10n.readerSection),
                 const ReaderAppSetting(format: 'epub'),
                 const ReaderAppSetting(format: 'pdf'),
+                // Volume keys only reach the app on Android (MainActivity).
+                if (defaultTargetPlatform == TargetPlatform.android)
+                  _SettingsSwitchTile(
+                    title: l10n.volumeKeysTurnPages,
+                    subtitle: l10n.volumeKeysTurnPagesHint,
+                    value: ref.watch(volumeKeyPagingProvider),
+                    onChanged: (val) => ref
+                        .read(volumeKeyPagingChoiceProvider.notifier)
+                        .set(val),
+                  ),
                 const SizedBox(height: 20),
                 _SettingsSectionHeader(l10n.advancedSection),
                 _SettingsSwitchTile(
@@ -614,7 +631,7 @@ class _UpdateSettingsWidgetState extends State<_UpdateSettingsWidget> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(updateL10n.onLatestVersion(result.currentVersion)),
-            backgroundColor: Colors.green,
+            backgroundColor: Colors.green.einkFg(context),
           ),
         );
       }
@@ -623,7 +640,7 @@ class _UpdateSettingsWidgetState extends State<_UpdateSettingsWidget> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(updateL10n.failedCheckUpdates(e.toString())),
-          backgroundColor: Colors.red,
+          backgroundColor: Colors.red.einkFg(context),
         ),
       );
     } finally {

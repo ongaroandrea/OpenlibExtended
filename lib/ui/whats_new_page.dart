@@ -7,6 +7,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
+import 'package:openlib/features/eink/eink.dart' show BusyIndicator;
 import 'package:openlib/main.dart' show MainScreen;
 import 'package:openlib/services/instance_manager.dart';
 import 'package:openlib/services/search_manager.dart';
@@ -276,7 +277,7 @@ class _SourcesTab extends ConsumerWidget {
                 ? const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: BusyIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.sync_rounded),
             label: Text(l10n.whatsNewUpdateInstances),
