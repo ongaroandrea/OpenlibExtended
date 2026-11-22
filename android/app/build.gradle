@@ -29,6 +29,16 @@ android {
         jvmTarget = JavaVersion.VERSION_17
     }
 
+    // ARM only. `--target-platform android-arm,android-arm64` drops
+    // Flutter's own x86 code, but plugins (sqlite3, jni) still ship x86
+    // libraries; leave those out too. x86 is used by emulators, not by
+    // phones or e-readers.
+    packaging {
+        jniLibs {
+            excludes += ['lib/x86_64/**', 'lib/x86/**']
+        }
+    }
+
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "dev.wath.openlibextended"

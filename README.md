@@ -109,13 +109,20 @@ Most e-ink devices run Android 11–15. The app needs Android 7.0 or later.
 
 ## Installation 📦
 
-Install the APK on your device (sideload). The universal APK works on
-every architecture, including older 32-bit e-readers.
+Install the APK on your device (sideload). Pick the one for your device's
+processor:
 
-To build it yourself:
+- `arm64-v8a`: almost every phone and e-reader from the last few years,
+  including recent Boox models. Use this one if unsure.
+- `armeabi-v7a`: older 32-bit e-readers.
+- `universal`: both of the above in one larger file.
+
+Builds are ARM only: there is no x86_64 (emulator) APK.
+
+To build them yourself:
 
 ```bash
-flutter build apk --release
+flutter build apk --split-per-abi --release --target-platform android-arm,android-arm64
 ```
 
 Release builds need your signing key in `android/key.properties`. Without it

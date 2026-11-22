@@ -50,6 +50,23 @@ void main() {
           File('.github/workflows/build.yml').readAsStringSync();
       expect(workflow, contains('flutter build apk --split-per-abi'));
     });
+
+    test('APKs are ARM only: no emulator (x86_64) build', () {
+      final workflow =
+          File('.github/workflows/build.yml').readAsStringSync();
+      final apkBuilds = workflow
+          .split('\n')
+          .where((l) => l.trim().startsWith('flutter build apk'))
+          .toList();
+      expect(apkBuilds, isNotEmpty);
+      for (final line in apkBuilds) {
+        expect(line, contains('--target-platform android-arm,android-arm64'),
+            reason: line);
+      }
+      expect(workflow, isNot(contains('app-x86_64-release.apk')));
+      // Plugins ship x86 libraries of their own; packaging drops them.
+      expect(gradle, contains("excludes += ['lib/x86_64/**', 'lib/x86/**']"));
+    });
   });
 
   group('proguard rules', () {
